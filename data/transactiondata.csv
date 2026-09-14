@@ -1,51 +1,51 @@
 date,merchant,amount,description
-2024-10-01,Client Invoice Payment,-3500.00,Monthly retainer - ABC Corp
-2024-10-01,WeWork,850.00,Co-working space monthly rent
-2024-10-01,Adobe Creative Cloud,79.99,Design software subscription
-2024-10-02,Staples,156.43,Office supplies - printer paper and toner
-2024-10-02,Starbucks,45.30,Client meeting coffee
-2024-10-03,LinkedIn Premium,59.99,Professional networking subscription
-2024-03,AWS,234.50,Cloud hosting services
-2024-10-03,Uber,28.50,Transportation to client site
-2024-10-04,Verizon Business,189.00,Business phone and internet
-2024-10-04,Salesforce,-1200.00,Consulting project payment received
-2024-10-05,Square Payroll,2850.00,Employee salaries - 2 contractors
-2024-10-05,Panera Bread,67.80,Team lunch meeting
-2024-10-06,Microsoft 365,22.00,Business suite subscription
-2024-10-06,FedEx,45.30,Shipping documents to client
-2024-10-07,Google Workspace,18.00,Email and cloud storage
-2024-10-07,Best Buy,1299.99,New laptop for employee
-2024-10-08,Stripe Processing Fees,87.50,Credit card transaction fees
-2024-10-08,Dunkin Donuts,23.40,Morning team coffee
-2024-10-09,QuickBooks Online,35.00,Accounting software
-2024-10-09,Home Depot,234.67,Office furniture and fixtures
-2024-10-10,Client Payment - Tech Startup,-2800.00,Website development project
-2024-10-10,Zoom,16.99,Video conferencing pro plan
-2024-10-11,Shell Gas,52.00,Fuel for business trip
-2024-10-11,Holiday Inn,189.00,Overnight stay for conference
-2024-10-12,Grammarly Business,30.00,Writing tools subscription
-2024-10-12,Chipotle,56.75,Working lunch with team
-2024-10-13,Amazon Business,445.89,Office equipment and supplies
-2024-10-13,Mailchimp,79.00,Email marketing platform
-2024-10-14,Pacific Gas & Electric,156.80,Office electricity bill
-2024-10-14,Freelancer Payment,-950.00,Graphic design project income
-2024-10-15,Slack,12.50,Team communication tool
-2024-10-15,Uber,34.20,Client meeting transportation
-2024-10-16,GitHub,21.00,Code repository subscription
-2024-10-16,Starbucks,38.50,Client presentation meeting
-2024-10-17,Insurance Company,425.00,Business liability insurance
-2024-10-17,Canva Pro,15.99,Design platform subscription
-2024-10-18,Retainer Payment - Law Firm,-4500.00,Monthly consulting services
-2024-10-18,Office Depot,189.34,Printer supplies and folders
-2024-10-19,Shopify,79.00,E-commerce platform subscription
-2024-10-19,Subway,42.30,Team lunch during sprint
-2024-10-20,Dropbox Business,20.00,Cloud storage upgrade
-2024-10-20,Lyft,29.75,Airport transportation
-2024-10-21,Domain Registrar,35.99,Annual domain renewal
-2024-10-21,Local Restaurant,145.60,Client dinner meeting
-2024-10-22,HubSpot,90.00,CRM software subscription
-2024-10-22,Project Milestone,-1750.00,App development payment received
-2024-10-23,Hootsuite,49.00,Social media management
-2024-10-23,Costco Business,312.45,Bulk office supplies
-2024-10-24,Water & Sewer,45.00,Office utilities
-2024-10-24,DocuSign,40.00,Electronic signature service
+10-01-2024,Client Invoice Payment,-3500.0,Monthly retainer - ABC Corp
+10-01-2024,WeWork,850.0,Co-working space monthly rent
+10-01-2024,Adobe Creative Cloud,79.99,Design software subscription
+10-02-2024,Staples,156.43,Office supplies - printer paper and toner
+10-02-2024,Starbucks,45.3,Client meeting coffee
+10-03-2024,LinkedIn Premium,59.99,Professional networking subscription
+10-03-2024,AWS,234.5,Cloud hosting services
+10-03-2024,Uber,28.5,Transportation to client site
+10-04-2024,Verizon Business,189.0,Business phone and internet
+10-04-2024,Salesforce,-1200.0,Consulting project payment received
+10-05-2024,Square Payroll,2850.0,Employee salaries - 2 contractors
+10-05-2024,Panera Bread,67.8,Team lunch meeting
+10-06-2024,Microsoft 365,22.0,Business suite subscription
+10-06-2024,FedEx,45.3,Shipping documents to client
+10-07-2024,Google Workspace,18.0,Email and cloud storage
+10-07-2024,Best Buy,1299.99,New laptop for employee
+10-08-2024,Stripe Processing Fees,87.5,Credit card transaction fees
+10-08-2024,Dunkin Donuts,23.4,Morning team coffee
+10-09-2024,QuickBooks Online,35.0,Accounting software
+10-09-2024,Home Depot,234.67,Office furniture and fixtures
+10-10-2024,Client Payment - Tech Startup,-2800.0,Website development project
+10-10-2024,Zoom,16.99,Video conferencing pro plan
+10-11-2024,Shell Gas,52.0,Fuel for business trip
+10-11-2024,Holiday Inn,189.0,Overnight stay for conference
+10-12-2024,Grammarly Business,30.0,Writing tools subscription
+10-12-2024,Chipotle,56.75,Working lunch with team
+10-13-2024,Amazon Business,445.89,Office equipment and supplies
+10-13-2024,Mailchimp,79.0,Email marketing platform
+10-14-2024,Pacific Gas & Electric,156.8,Office electricity bill
+10-14-2024,Freelancer Payment,-950.0,Graphic design project income
+10-15-2024,Slack,12.5,Team communication tool
+10-15-2024,Uber,34.2,Client meeting transportation
+10-16-2024,GitHub,21.0,Code repository subscription
+10-16-2024,Starbucks,38.5,Client presentation meeting
+10-17-2024,Insurance Company,425.0,Business liability insurance
+10-17-2024,Canva Pro,15.99,Design platform subscription
+10-18-2024,Retainer Payment - Law Firm,-4500.0,Monthly consulting services
+10-18-2024,Office Depot,189.34,Printer supplies and folders
+10-19-2024,Shopify,79.0,E-commerce platform subscription
+10-19-2024,Subway,42.3,Team lunch during sprint
+10-20-2024,Dropbox Business,20.0,Cloud storage upgrade
+10-20-2024,Lyft,29.75,Airport transportation
+10-21-2024,Domain Registrar,35.99,Annual domain renewal
+10-21-2024,Local Restaurant,145.6,Client dinner meeting
+10-22-2024,HubSpot,90.0,CRM software subscription
+10-22-2024,Project Milestone,-1750.0,App development payment received
+10-23-2024,Hootsuite,49.0,Social media management
+10-23-2024,Costco Business,312.45,Bulk office supplies
+10-24-2024,Water & Sewer,45.0,Office utilities
+10-24-2024,DocuSign,40.0,Electronic signature service

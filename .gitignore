@@ -1,0 +1,20 @@
+# Secrets / credentials — never commit
+.env
+.env.*
+*.pem
+*.key
+aws_credentials
+.aws/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Test / tooling caches
+.pytest_cache/
+.DS_Store
+
+# Optional: don't commit generated outputs (your call)
+# outputs/

@@ -1,7 +1,7 @@
-import boto3
-from botocore.config import Config
 import json
 import os
+
+from bedrock_client import get_bedrock_client
 
 # Load inputs
 with open("outputs/categorized.json", "r") as f:
@@ -72,17 +72,7 @@ Return ONLY plain text.
 """
 
 # Configure Bedrock
-config = Config(
-    read_timeout=180,
-    connect_timeout=60,
-    retries={'max_attempts': 2}
-)
-
-bedrock = boto3.client(
-    "bedrock-runtime",
-    region_name="us-east-1",
-    config=config
-)
+bedrock = get_bedrock_client()
 
 # Call Claude
 response = bedrock.invoke_model(

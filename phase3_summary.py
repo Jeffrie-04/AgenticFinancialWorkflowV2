@@ -1,7 +1,7 @@
-import boto3
 import json
 import os
-from botocore.config import Config
+
+from bedrock_client import get_bedrock_client
 
 with open("outputs/categorized.json", "r") as f:
     categorized = json.load(f)
@@ -51,17 +51,7 @@ Remember: Return ONLY plain text. No JSON, no formatting.
 """
 
 
-config = Config(
-    read_timeout=180,
-    connect_timeout=60,
-    retries={'max_attempts': 2}
-)
-
-bedrock = boto3.client(
-    'bedrock-runtime',
-    region_name='us-east-1',
-    config=config
-)
+bedrock = get_bedrock_client()
 # Call Claude Haiku since Titan was having issues reading the large input
 response = bedrock.invoke_model(
     modelId="anthropic.claude-3-haiku-20240307-v1:0",

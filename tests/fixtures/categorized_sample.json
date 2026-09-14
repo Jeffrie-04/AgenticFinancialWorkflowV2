@@ -1,0 +1,304 @@
+{
+  "categorized": [
+    {
+      "date": "2024-10-01",
+      "merchant": "Client Invoice Payment",
+      "amount": -3500.0,
+      "category": "Income"
+    },
+    {
+      "date": "2024-10-01",
+      "merchant": "WeWork",
+      "amount": 850.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-01",
+      "merchant": "Adobe Creative Cloud",
+      "amount": 79.99,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-02",
+      "merchant": "Staples",
+      "amount": 156.43,
+      "category": "Shopping"
+    },
+    {
+      "date": "2024-10-02",
+      "merchant": "Starbucks",
+      "amount": 45.3,
+      "category": "Dining"
+    },
+    {
+      "date": "2024-10-03",
+      "merchant": "LinkedIn Premium",
+      "amount": 59.99,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-03",
+      "merchant": "AWS",
+      "amount": 234.5,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-03",
+      "merchant": "Uber",
+      "amount": 28.5,
+      "category": "Other"
+    },
+    {
+      "date": "2024-10-04",
+      "merchant": "Verizon Business",
+      "amount": 189.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-04",
+      "merchant": "Salesforce",
+      "amount": -1200.0,
+      "category": "Income"
+    },
+    {
+      "date": "2024-10-05",
+      "merchant": "Square Payroll",
+      "amount": 2850.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-05",
+      "merchant": "Panera Bread",
+      "amount": 67.8,
+      "category": "Dining"
+    },
+    {
+      "date": "2024-10-06",
+      "merchant": "Microsoft 365",
+      "amount": 22.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-06",
+      "merchant": "FedEx",
+      "amount": 45.3,
+      "category": "Other"
+    },
+    {
+      "date": "2024-10-07",
+      "merchant": "Google Workspace",
+      "amount": 18.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-07",
+      "merchant": "Best Buy",
+      "amount": 1299.99,
+      "category": "Shopping"
+    },
+    {
+      "date": "2024-10-08",
+      "merchant": "Stripe Processing Fees",
+      "amount": 87.5,
+      "category": "Other"
+    },
+    {
+      "date": "2024-10-08",
+      "merchant": "Dunkin Donuts",
+      "amount": 23.4,
+      "category": "Dining"
+    },
+    {
+      "date": "2024-10-09",
+      "merchant": "QuickBooks Online",
+      "amount": 35.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-09",
+      "merchant": "Home Depot",
+      "amount": 234.67,
+      "category": "Shopping"
+    },
+    {
+      "date": "2024-10-10",
+      "merchant": "Client Payment - Tech Startup",
+      "amount": -2800.0,
+      "category": "Income"
+    },
+    {
+      "date": "2024-10-10",
+      "merchant": "Zoom",
+      "amount": 16.99,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-11",
+      "merchant": "Shell Gas",
+      "amount": 52.0,
+      "category": "Other"
+    },
+    {
+      "date": "2024-10-11",
+      "merchant": "Holiday Inn",
+      "amount": 189.0,
+      "category": "Other"
+    },
+    {
+      "date": "2024-10-12",
+      "merchant": "Grammarly Business",
+      "amount": 30.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-12",
+      "merchant": "Chipotle",
+      "amount": 56.75,
+      "category": "Dining"
+    },
+    {
+      "date": "2024-10-13",
+      "merchant": "Amazon Business",
+      "amount": 445.89,
+      "category": "Shopping"
+    },
+    {
+      "date": "2024-10-13",
+      "merchant": "Mailchimp",
+      "amount": 79.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-14",
+      "merchant": "Pacific Gas & Electric",
+      "amount": 156.8,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-14",
+      "merchant": "Freelancer Payment",
+      "amount": -950.0,
+      "category": "Income"
+    },
+    {
+      "date": "2024-10-15",
+      "merchant": "Slack",
+      "amount": 12.5,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-15",
+      "merchant": "Uber",
+      "amount": 34.2,
+      "category": "Other"
+    },
+    {
+      "date": "2024-10-16",
+      "merchant": "GitHub",
+      "amount": 21.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-16",
+      "merchant": "Starbucks",
+      "amount": 38.5,
+      "category": "Dining"
+    },
+    {
+      "date": "2024-10-17",
+      "merchant": "Insurance Company",
+      "amount": 425.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-17",
+      "merchant": "Canva Pro",
+      "amount": 15.99,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-18",
+      "merchant": "Retainer Payment - Law Firm",
+      "amount": -4500.0,
+      "category": "Income"
+    },
+    {
+      "date": "2024-10-18",
+      "merchant": "Office Depot",
+      "amount": 189.34,
+      "category": "Shopping"
+    },
+    {
+      "date": "2024-10-19",
+      "merchant": "Shopify",
+      "amount": 79.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-19",
+      "merchant": "Subway",
+      "amount": 42.3,
+      "category": "Dining"
+    },
+    {
+      "date": "2024-10-20",
+      "merchant": "Dropbox Business",
+      "amount": 20.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-20",
+      "merchant": "Lyft",
+      "amount": 29.75,
+      "category": "Other"
+    },
+    {
+      "date": "2024-10-21",
+      "merchant": "Domain Registrar",
+      "amount": 35.99,
+      "category": "Other"
+    },
+    {
+      "date": "2024-10-21",
+      "merchant": "Local Restaurant",
+      "amount": 145.6,
+      "category": "Dining"
+    },
+    {
+      "date": "2024-10-22",
+      "merchant": "HubSpot",
+      "amount": 90.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-22",
+      "merchant": "Project Milestone",
+      "amount": -1750.0,
+      "category": "Income"
+    },
+    {
+      "date": "2024-10-23",
+      "merchant": "Hootsuite",
+      "amount": 49.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-23",
+      "merchant": "Costco Business",
+      "amount": 312.45,
+      "category": "Shopping"
+    },
+    {
+      "date": "2024-10-24",
+      "merchant": "Water & Sewer",
+      "amount": 45.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-24",
+      "merchant": "DocuSign",
+      "amount": 40.0,
+      "category": "Utilities"
+    }
+  ]
+}

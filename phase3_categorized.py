@@ -1,10 +1,10 @@
-import boto3
-from botocore.config import Config 
 import json
 import pandas as pd
 
+from bedrock_client import get_bedrock_client, clean_json_text, parse_json_response
+
 # Load transaction data
-df = pd.read_csv('data/transactiondata.csv')
+df = pd.read_csv('data/transactiondata.csv').head(5)
 
 # RISEN Prompt
 prompt = f"""ROLE: You are an expert financial transaction categorization agent for small business accounting.
@@ -82,21 +82,11 @@ YOUR RESPONSE MUST START WITH {{ AND END WITH }}. Nothing else."""
 
 
 # Configure timeout
-config = Config(
-    read_timeout=180,
-    connect_timeout=60,
-    retries={'max_attempts': 2}
-)
-
-bedrock = boto3.client(
-    'bedrock-runtime', 
-    region_name='us-east-1',
-    config=config 
-)
+bedrock = get_bedrock_client()
 
 # Call Claude Haiku since Titan was having issues reading the large input
 response = bedrock.invoke_model(
-    modelId='anthropic.claude-3-haiku-20240307-v1:0',
+    modelId='us.anthropic.claude-haiku-4-5-20251001-v1:0',
     contentType='application/json',
     accept='application/json',
     body=json.dumps({
@@ -118,35 +108,11 @@ text = response_body['content'][0]['text']
 
 
 # JSON CLEANING
-text = text.strip()
-
-# Remove markdown code blocks
-if text.startswith("```json"):
-    text = text[7:]
-if text.startswith("```"):
-    text = text[3:]
-if text.endswith("```"):
-    text = text[:-3]
-text = text.strip()
-
-# Find JSON in response
-start = text.find('{')
-end = text.rfind('}') + 1
-if start != -1 and end > start:
-    text = text[start:end]
-else:
-    print("Error: Could not find JSON in response")
-    print("Raw response:", text[:500])
-    exit(1)
+text = clean_json_text(text)
 
 # Parse JSON
-try:
-    categorized = json.loads(text)
-    print("JSON parsed successfully")
-except json.JSONDecodeError as e:
-    print(f"Error parsing JSON: {e}")
-    print("Cleaned text:", text[:500])
-    exit(1)
+categorized = parse_json_response(text)
+print("JSON parsed successfully")
 
 # Validate structure
 if "categorized" not in categorized:
