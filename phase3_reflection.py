@@ -4,79 +4,60 @@ import os
 from bedrock_client import get_bedrock_client
 
 # Load inputs
-with open("outputs/categorized.json", "r") as f:
-    categorized = json.load(f)
-
 with open("outputs/kpis.json", "r") as f:
     kpis = json.load(f)
-
-with open("outputs/summary.txt", "r") as f:
-    summary = f.read()
-
-with open("outputs/categorized.json", "r") as f:
-    original_data = json.load(f)
+kpis_json = json.dumps(kpis, indent=2)
 
 # ----- INSERT YOUR FINAL REFLECTION PROMPT HERE -----
-reflection_prompt = """
-Role:
-You are an analytical review agent responsible for evaluating the quality of the categorization, KPIs, and summary generated in previous workflow stages. Your goal is to inspect outputs, detect weaknesses, and propose improvements for the next iteration of the agentic workflow.
+reflection_prompt = f"""ROLE:
+You are an experienced financial advisor who explains things simply, without
+jargon. You give clear insights to a small-business owner about their company
+and how it's going.
 
-Input:
-You will be given the outputs of earlier stages, including:
-categorized.json
-kpis.json
-summary.txt
-the original transaction dataset
-Use these to identify issues, errors, and areas for improvement.
+INSTRUCTIONS:
+Read the provided KPIs and produce plain-English guidance for the owner. The
+KPIs have already been computed and verified; your job is to interpret them,
+not to calculate anything.
 
-Steps:
-Review all outputs and:
-Identify incorrect or questionable transaction categories.
-Find KPI errors, inconsistencies, or suspicious values.
-Suggest improvements to categorization logic (e.g., additional rules, merchant mappings).
-Suggest prompt modifications to improve KPI accuracy and validation.
-Provide reasoning explaining why the model may have made these mistakes.
+STEPS:
+First, analyze internally (do NOT include this reasoning in your response):
+1. Review all provided KPIs and understand the business's position.
+2. Identify which numbers are concerning and which are strong.
+3. Consider what likely drove those numbers (which categories, clients, costs).
 
-Expectations:
-Your reflection must:
-Point out at least two specific weaknesses or errors
-Discuss misclassifications found in categorized.json
-Identify KPI inconsistencies based on the dataset
-Suggest new or refined categorization rules
-Suggest prompt improvements for better KPI extraction
-Present a clear, logical, model-driven reasoning process
-Be written in plain text, not JSON
+Then, write the response for the owner, in this order:
+4. Open with a one-line overall verdict on the period (e.g. healthy surplus,
+   or strained).
+5. State the 2-3 most important observations, each tied to a specific KPI.
+6. Give specific, actionable recommendations tied to those observations —
+   what to maintain, what to watch, and what to improve.
 
-Narrowing (Plain Text Only):
-Return a concise reflection in paragraph form that addresses all required points. No JSON, no lists, plain text only
+EXPECTATIONS (what a good response looks like):
+- Every observation and recommendation points to a specific KPI.
+- It confirms what is healthy, not only what is weak.
+- Advice is specific to this business, not generic.
+- Plain, readable language an owner can act on.
 
+NARROWING (hard rules — do not violate):
+- Do NOT state any number or figure not present in the provided KPIs.
+- Do NOT describe trends, increases, decreases, or direction over time — you
+  are given a single period only, so there is no trend to report. Describe the
+  current state, not its direction.
+- When a metric is healthy, say so plainly rather than inventing a concern.
+- Do NOT make any statement without tying it to a KPI number you were given.
+- Keep the response under 150 words.
+- Return plain text only — no JSON, no markdown formatting.
+
+KPIS:
+{kpis_json}
 """
-
-# Build full prompt with all data
-final_prompt = f"""
-{reflection_prompt}
-
-ORIGINAL_TRANSACTIONS:
-{json.dumps(original_data, indent=2)}
-
-CATEGORIZED_JSON:
-{json.dumps(categorized, indent=2)}
-
-KPIS_JSON:
-{json.dumps(kpis, indent=2)}
-
-SUMMARY_TXT:
-{summary}
-
-Return ONLY plain text.
-"""
-
+print(reflection_prompt)
 # Configure Bedrock
 bedrock = get_bedrock_client()
 
 # Call Claude
 response = bedrock.invoke_model(
-    modelId="anthropic.claude-3-haiku-20240307-v1:0",
+    modelId="us.anthropic.claude-haiku-4-5-20251001-v1:0",
     contentType="application/json",
     accept="application/json",
     body=json.dumps({
@@ -86,7 +67,7 @@ response = bedrock.invoke_model(
         "messages": [
             {
                 "role": "user",
-                "content": final_prompt
+                "content": reflection_prompt
             }
         ]
     })

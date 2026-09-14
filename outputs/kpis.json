@@ -7,6 +7,44 @@
       "Best Buy",
       "WeWork"
     ],
-    "average_expense": 204.08
+    "average_expense": 204.08,
+    "net_cash_flow": 5720.58,
+    "status": "surplus",
+    "spend_by_category": {
+      "Utilities": {
+        "amount": 5418.76,
+        "pct_of_spend": 60.3
+      },
+      "Shopping": {
+        "amount": 2638.77,
+        "pct_of_spend": 29.4
+      },
+      "Other": {
+        "amount": 502.24,
+        "pct_of_spend": 5.6
+      },
+      "Dining": {
+        "amount": 419.65,
+        "pct_of_spend": 4.7
+      }
+    },
+    "income_concentration": {
+      "top_client": "Retainer Payment - Law Firm",
+      "top_client_pct": 30.6,
+      "top3_clients_pct": 73.5,
+      "num_income_sources": 6
+    },
+    "fixed_vs_discretionary": {
+      "fixed_spend": 5418.76,
+      "discretionary_spend": 3560.66,
+      "fixed_pct": 60.3
+    },
+    "burn_rate": {
+      "period_days": 23,
+      "daily_avg_spend": 390.41,
+      "monthly_projection": 11712.29,
+      "unparseable_dates": 1,
+      "runway_note": "Runway not computed: requires a starting cash balance."
+    }
   }
 }
