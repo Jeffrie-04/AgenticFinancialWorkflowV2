@@ -3,11 +3,13 @@ import pandas as pd
 
 from bedrock_client import get_bedrock_client, clean_json_text, parse_json_response
 
-# Load transaction data
-df = pd.read_csv('data/transactiondata.csv').head(5)
 
-# RISEN Prompt
-prompt = f"""ROLE: You are an expert financial transaction categorization agent for small business accounting.
+def main():
+    # Load transaction data
+    df = pd.read_csv('data/transactiondata.csv').head(5)
+
+    # RISEN Prompt
+    prompt = f"""ROLE: You are an expert financial transaction categorization agent for small business accounting.
 
 INSTRUCTIONS: Categorize each transaction into exactly ONE category based on these rules:
 
@@ -81,57 +83,60 @@ Format:
 YOUR RESPONSE MUST START WITH {{ AND END WITH }}. Nothing else."""
 
 
-# Configure timeout
-bedrock = get_bedrock_client()
+    # Configure timeout
+    bedrock = get_bedrock_client()
 
-# Call Claude Haiku since Titan was having issues reading the large input
-response = bedrock.invoke_model(
-    modelId='us.anthropic.claude-haiku-4-5-20251001-v1:0',
-    contentType='application/json',
-    accept='application/json',
-    body=json.dumps({
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 8000,
-        "temperature": 0,
-        "messages": [
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
-    })
-)
+    # Call Claude Haiku since Titan was having issues reading the large input
+    response = bedrock.invoke_model(
+        modelId='us.anthropic.claude-haiku-4-5-20251001-v1:0',
+        contentType='application/json',
+        accept='application/json',
+        body=json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 8000,
+            "temperature": 0,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        })
+    )
 
-# Parse response
-response_body = json.loads(response['body'].read())
-text = response_body['content'][0]['text']
+    # Parse response
+    response_body = json.loads(response['body'].read())
+    text = response_body['content'][0]['text']
 
 
-# JSON CLEANING
-text = clean_json_text(text)
+    # JSON CLEANING
+    text = clean_json_text(text)
 
-# Parse JSON
-categorized = parse_json_response(text)
-print("JSON parsed successfully")
+    # Parse JSON
+    categorized = parse_json_response(text)
+    print("JSON parsed successfully")
 
-# Validate structure
-if "categorized" not in categorized:
-    print("Warning: Response missing 'categorized'")
-    if isinstance(categorized, list):
-        categorized = {"categorized": categorized}
-    elif "items" in categorized:
-        categorized = {"categorized": categorized["items"]}
+    # Validate structure
+    if "categorized" not in categorized:
+        print("Warning: Response missing 'categorized'")
+        if isinstance(categorized, list):
+            categorized = {"categorized": categorized}
+        elif "items" in categorized:
+            categorized = {"categorized": categorized["items"]}
 
-# Validation
-expected = len(df)
-actual = len(categorized.get("categorized", []))
-print(f"Categorized: {actual}/{expected} transactions")
+    # Validation
+    expected = len(df)
+    actual = len(categorized.get("categorized", []))
+    print(f"Categorized: {actual}/{expected} transactions")
 
-if actual < expected:
-    print(f"WARNING: Missing {expected - actual} transactions!")
-print()
+    if actual < expected:
+        print(f"WARNING: Missing {expected - actual} transactions!")
+    print()
 
-# Save
-with open('outputs/categorized.json', 'w') as f:
-    json.dump(categorized, f, indent=2)
+    # Save
+    with open('outputs/categorized.json', 'w') as f:
+        json.dump(categorized, f, indent=2)
 
+
+if __name__ == "__main__":
+    main()

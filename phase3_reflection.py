@@ -3,13 +3,15 @@ import os
 
 from bedrock_client import get_bedrock_client
 
-# Load inputs
-with open("outputs/kpis.json", "r") as f:
-    kpis = json.load(f)
-kpis_json = json.dumps(kpis, indent=2)
 
-# ----- INSERT YOUR FINAL REFLECTION PROMPT HERE -----
-reflection_prompt = f"""ROLE:
+def main():
+    # Load inputs
+    with open("outputs/kpis.json", "r") as f:
+        kpis = json.load(f)
+    kpis_json = json.dumps(kpis, indent=2)
+
+    # ----- INSERT YOUR FINAL REFLECTION PROMPT HERE -----
+    reflection_prompt = f"""ROLE:
 You are an experienced financial advisor who explains things simply, without
 jargon. You give clear insights to a small-business owner about their company
 and how it's going.
@@ -51,35 +53,41 @@ NARROWING (hard rules — do not violate):
 KPIS:
 {kpis_json}
 """
-print(reflection_prompt)
-# Configure Bedrock
-bedrock = get_bedrock_client()
+    #Test if prompt was fully built correctly
+    #print(reflection_prompt)
 
-# Call Claude
-response = bedrock.invoke_model(
-    modelId="us.anthropic.claude-haiku-4-5-20251001-v1:0",
-    contentType="application/json",
-    accept="application/json",
-    body=json.dumps({
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 2000,
-        "temperature": 0,
-        "messages": [
-            {
-                "role": "user",
-                "content": reflection_prompt
-            }
-        ]
-    })
-)
+    # Configure Bedrock
+    bedrock = get_bedrock_client()
 
-# Extract response
-response_body = json.loads(response["body"].read())
-reflection_text = response_body["content"][0]["text"].strip()
+    # Call Claude
+    response = bedrock.invoke_model(
+        modelId="us.anthropic.claude-haiku-4-5-20251001-v1:0",
+        contentType="application/json",
+        accept="application/json",
+        body=json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 2000,
+            "temperature": 0,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": reflection_prompt
+                }
+            ]
+        })
+    )
 
-# Save output
-os.makedirs("outputs", exist_ok=True)
-with open("outputs/reflection.txt", "w") as f:
-    f.write(reflection_text)
+    # Extract response
+    response_body = json.loads(response["body"].read())
+    reflection_text = response_body["content"][0]["text"].strip()
 
-print("Reflection saved to outputs/reflection.txt")
+    # Save output
+    os.makedirs("outputs", exist_ok=True)
+    with open("outputs/reflection.txt", "w") as f:
+        f.write(reflection_text)
+
+    print("Reflection saved to outputs/reflection.txt")
+
+
+if __name__ == "__main__":
+    main()

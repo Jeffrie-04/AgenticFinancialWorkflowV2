@@ -3,12 +3,14 @@ import pandas as pd
 
 from bedrock_client import get_bedrock_client, clean_json_text, parse_json_response
 
-# Load transaction data
-df = pd.read_csv('data/transactiondata.csv')
-sample = df.head(5).to_string(index=False)
 
-# RAFT Prompt
-prompt = f"""Role: You are a financial analysis agent with 15 years of experience.
+def main():
+    # Load transaction data
+    df = pd.read_csv('data/transactiondata.csv')
+    sample = df.head(5).to_string(index=False)
+
+    # RAFT Prompt
+    prompt = f"""Role: You are a financial analysis agent with 15 years of experience.
 
 Audience: You are providing assistance to a small start up company about their financial transactions.
 
@@ -37,37 +39,41 @@ Return ONLY valid JSON (no markdown, no extra text):
 YOUR RESPONSE MUST START WITH {{ AND END WITH }}. Nothing else.
 """
 
-# Calling Amazon Titan since its free
-bedrock = get_bedrock_client(config=None)
+    # Calling Amazon Titan since its free
+    bedrock = get_bedrock_client(config=None)
 
-response = bedrock.invoke_model(
-    modelId='amazon.titan-text-express-v1',
-    body=json.dumps({
-        "inputText": prompt,
-        "textGenerationConfig": {
-            "maxTokenCount": 2000,
-            "temperature": 0.0
-        }
-    })
-)
+    response = bedrock.invoke_model(
+        modelId='us.anthropic.claude-haiku-4-5-20251001-v1:0',
+        body=json.dumps({
+            "inputText": prompt,
+            "textGenerationConfig": {
+                "maxTokenCount": 2000,
+                "temperature": 0.0
+            }
+        })
+    )
 
-output = json.loads(response['body'].read())
-text = output['results'][0]['outputText']
+    output = json.loads(response['body'].read())
+    text = output['results'][0]['outputText']
 
-# JSON CLEANING (Titan sometimes adds extra text)
-text = clean_json_text(text)
+    # JSON CLEANING (Titan sometimes adds extra text)
+    text = clean_json_text(text)
 
-# Parse JSON
-plan = parse_json_response(text)
+    # Parse JSON
+    plan = parse_json_response(text)
 
-# Validate structure
-if "plan_steps" not in plan:
-    print("Warning: Response missing 'plan_steps'")
-    if isinstance(plan, list):
-        plan = {"plan_steps": plan}
-    elif "steps" in plan:
-        plan = {"plan_steps": plan["steps"]}
+    # Validate structure
+    if "plan_steps" not in plan:
+        print("Warning: Response missing 'plan_steps'")
+        if isinstance(plan, list):
+            plan = {"plan_steps": plan}
+        elif "steps" in plan:
+            plan = {"plan_steps": plan["steps"]}
 
-# Save
-with open('outputs/plan.json', 'w') as f:
-    json.dump(plan, f, indent=2)
+    # Save
+    with open('outputs/plan.json', 'w') as f:
+        json.dump(plan, f, indent=2)
+
+
+if __name__ == "__main__":
+    main()
