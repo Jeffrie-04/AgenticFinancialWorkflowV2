@@ -39,24 +39,30 @@ Return ONLY valid JSON (no markdown, no extra text):
 YOUR RESPONSE MUST START WITH {{ AND END WITH }}. Nothing else.
 """
 
-    # Calling Amazon Titan since its free
+    # Calling Claude Haiku via Bedrock
     bedrock = get_bedrock_client(config=None)
 
     response = bedrock.invoke_model(
         modelId='us.anthropic.claude-haiku-4-5-20251001-v1:0',
+        contentType='application/json',
+        accept='application/json',
         body=json.dumps({
-            "inputText": prompt,
-            "textGenerationConfig": {
-                "maxTokenCount": 2000,
-                "temperature": 0.0
-            }
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 2000,
+            "temperature": 0,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
         })
     )
 
-    output = json.loads(response['body'].read())
-    text = output['results'][0]['outputText']
+    response_body = json.loads(response['body'].read())
+    text = response_body['content'][0]['text']
 
-    # JSON CLEANING (Titan sometimes adds extra text)
+    # JSON CLEANING (model sometimes adds extra text)
     text = clean_json_text(text)
 
     # Parse JSON

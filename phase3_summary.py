@@ -56,7 +56,7 @@ Remember: Return ONLY plain text. No JSON, no formatting.
     bedrock = get_bedrock_client()
     # Call Claude Haiku since Titan was having issues reading the large input
     response = bedrock.invoke_model(
-        modelId="anthropic.claude-3-haiku-20240307-v1:0",
+        modelId="us.anthropic.claude-haiku-4-5-20251001-v1:0",
         contentType="application/json",
         accept="application/json",
         body=json.dumps({
