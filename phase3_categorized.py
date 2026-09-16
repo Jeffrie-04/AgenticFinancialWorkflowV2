@@ -6,7 +6,7 @@ from bedrock_client import get_bedrock_client, clean_json_text, parse_json_respo
 
 def main():
     # Load transaction data
-    df = pd.read_csv('data/transactiondata.csv').head(5)
+    df = pd.read_csv('data/transactiondata.csv').head(5) # TODO: Remove .head(5) for full dataset
 
     # RISEN Prompt
     prompt = f"""ROLE: You are an expert financial transaction categorization agent for small business accounting.
