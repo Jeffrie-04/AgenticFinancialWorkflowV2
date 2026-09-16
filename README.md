@@ -63,4 +63,4 @@ Individual stages can also be run on their own (e.g. `python phase3_kpisnoAI.py`
 
 Current limitations: the analysis covers a single time period (no trend detection yet), "runway" can't be computed without a starting cash balance, the sample dataset is small, and input is currently a clean CSV rather than the bank/credit-card statements a real business would more likely have.
 
-Next steps: **statement ingestion** — parsing real bank and credit-card statements into the transaction format the pipeline already expects, so the analysis works on what businesses actually have; **multi-month data** to unlock trend and period-over-period metrics; and a **UI** for uploading data and viewing results.
+Next steps: **statement ingestion** — parsing real bank and credit-card statements into the transaction format the pipeline already expects, so the analysis works on what businesses actually have; **multi-month data** to unlock trend and period-over-period metrics.

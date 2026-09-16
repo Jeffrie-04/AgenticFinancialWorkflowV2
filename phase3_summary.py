@@ -5,51 +5,35 @@ from bedrock_client import get_bedrock_client
 
 
 def main():
-    with open("outputs/categorized.json", "r") as f:
-        categorized = json.load(f)
-
     with open("outputs/kpis.json", "r") as f:
         kpis = json.load(f)
 
     # -------------------------------
     # INSERT YOUR SUMMARIZATION PROMPT HERE
     # -------------------------------
-    prompt = f"""
-Role:
-You are a financial summary generation agent with expertise in interpreting categorized transactions and computed KPIs. Your goal is to produce a clear, concise, and professional monthly financial summary.
+    prompt = f"""Role:
+You are a financial reporting agent. You write a short, neutral monthly
+financial recap for a small-business owner, based on already-computed KPIs.
 
-Input:
-You will be given:
-Categorized transactions
-KPI results (total spend, total income, top merchants, average expense)
-Use this information to generate a short financial summary ≤100 words.
+Task:
+Using ONLY the KPIs provided below, write a single plain-text paragraph
+(≤100 words) that recaps the month. This is a factual recap, not advice —
+state what the numbers show, not what the owner should do.
 
-Steps:
-Review the categorized transactions and KPIs.
-Identify major spending categories.
-Note total spend and total income.
-Recognize top merchants with significant spending.
-Form a concise, readable, and professional financial overview of the month.
+Cover, in a natural flow:
+- Total income and total spend, and the net cash flow (surplus or deficit).
+- The largest spending categories (from spend_by_category).
+- Any notable concentration — e.g. how much of income comes from the top
+  clients (from income_concentration).
 
-Expectations:
-The summary must:
-Highlight major spending categories
-Mention total income and total spend
-Point out top merchants
-Provide meaningful insight into overall financial health
-Be clear, concise, and ≤100 words
-Contain only plain text (no JSON, no formatting, no bullet points)
-
-Narrowing (Plain Text Only):
-Return a single short financial summary paragraph (≤100 words). Nothing else.
-
-CATEGORIZED_TRANSACTIONS:
-{json.dumps(categorized, indent=2)}
+Rules:
+- Use ONLY numbers present in the KPIs below. Do not invent or recompute any figure.
+- Do NOT give recommendations or advice — that is a separate step.
+- Do NOT describe trends or changes over time — this is a single period.
+- Plain text only: one paragraph, no lists, no JSON, no markdown, ≤100 words.
 
 KPIS:
 {json.dumps(kpis, indent=2)}
-
-Remember: Return ONLY plain text. No JSON, no formatting.
 """
 
 
