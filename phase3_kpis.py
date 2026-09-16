@@ -3,20 +3,22 @@ import pandas as pd
 
 from bedrock_client import get_bedrock_client, clean_json_text, parse_json_response
 
-# Load categorized transactions
-try:
-    with open('outputs/categorized.json', 'r') as f:
-        data = json.load(f)
-    
-    transactions = data.get('categorized', [])
-    
-except FileNotFoundError:
-    print("Error: outputs/categorized.json not found")
-    print("Run phase3_categorized.py first!")
-    exit(1)
-    
-# RISEN Prompt
-prompt = f"""Role:
+
+def main():
+    # Load categorized transactions
+    try:
+        with open('outputs/categorized.json', 'r') as f:
+            data = json.load(f)
+
+        transactions = data.get('categorized', [])
+
+    except FileNotFoundError:
+        print("Error: outputs/categorized.json not found")
+        print("Run phase3_categorized.py first!")
+        exit(1)
+
+    # RISEN Prompt
+    prompt = f"""Role:
 You are a financial data analysis agent with expertise in computing performance metrics from categorized financial transactions. You specialize in producing accurate KPI reports for small businesses.
 
 Input:
@@ -68,73 +70,53 @@ TRANSACTION DATA:
 YOUR RESPONSE MUST START WITH {{ AND END WITH }}. Nothing else."""
 
 
-# Configure timeout
-bedrock = get_bedrock_client()
+    # Configure timeout
+    bedrock = get_bedrock_client()
 
-# Call Claude Haiku since Titan was having issues reading the large input
-response = bedrock.invoke_model(
-    modelId='anthropic.claude-3-haiku-20240307-v1:0',
-    contentType='application/json',
-    accept='application/json',
-    body=json.dumps({
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 8000,
-        "temperature": 0,
-        "messages": [
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
-    })
-)
+    # Call Claude Haiku since Titan was having issues reading the large input
+    response = bedrock.invoke_model(
+        modelId='us.anthropic.claude-haiku-4-5-20251001-v1:0',
+        contentType='application/json',
+        accept='application/json',
+        body=json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 8000,
+            "temperature": 0,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        })
+    )
 
-# Parse response
-response_body = json.loads(response['body'].read())
-text = response_body['content'][0]['text']
+    # Parse response
+    response_body = json.loads(response['body'].read())
+    text = response_body['content'][0]['text']
 
 
-# JSON CLEANING
-text = text.strip()
+    # JSON CLEANING
+    text = clean_json_text(text)
 
-# Remove markdown code blocks
-if text.startswith("```json"):
-    text = text[7:]
-if text.startswith("```"):
-    text = text[3:]
-if text.endswith("```"):
-    text = text[:-3]
-text = text.strip()
-
-# Find JSON in response
-start = text.find('{')
-end = text.rfind('}') + 1
-if start != -1 and end > start:
-    text = text[start:end]
-else:
-    print("Error: Could not find JSON in response")
-    print("Raw response:", text[:500])
-    exit(1)
-
-# Parse JSON
-try:
-    kpis = json.loads(text)
+    # Parse JSON
+    kpis = parse_json_response(text)
     print("JSON parsed successfully")
-except json.JSONDecodeError as e:
-    print(f"Error parsing JSON: {e}")
-    print("Cleaned text:", text[:500])
-    exit(1)
 
-# Validate structure
-if "kpis" not in kpis:
-    print("Warning: Response missing 'kpis'")
-    if isinstance(kpis, list):
-        kpis = {"kpis": kpis}
-    elif "items" in kpis:
-        kpis = {"kpis": kpis["items"]}
+    # Validate structure
+    if "kpis" not in kpis:
+        print("Warning: Response missing 'kpis'")
+        if isinstance(kpis, list):
+            kpis = {"kpis": kpis}
+        elif "items" in kpis:
+            kpis = {"kpis": kpis["items"]}
 
 
 
-# Save
-with open('outputs/kpisAI.json', 'w') as f:
-    json.dump(kpis, f, indent=2)
+    # Save
+    with open('outputs/kpisAI.json', 'w') as f:
+        json.dump(kpis, f, indent=2)
+
+
+if __name__ == "__main__":
+    main()
