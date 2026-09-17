@@ -1,7 +1,7 @@
 import json
 import os
 
-from bedrock_client import get_bedrock_client
+from bedrock_client import call_model
 
 
 def main():
@@ -37,28 +37,7 @@ KPIS:
 """
 
 
-    bedrock = get_bedrock_client()
-    # Call Claude Haiku since Titan was having issues reading the large input
-    response = bedrock.invoke_model(
-        modelId="us.anthropic.claude-haiku-4-5-20251001-v1:0",
-        contentType="application/json",
-        accept="application/json",
-        body=json.dumps({
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 2000,
-            "temperature": 0,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
-        })
-    )
-
-    # Extract text
-    response_body = json.loads(response["body"].read())
-    summary_text = response_body["content"][0]["text"].strip()
+    summary_text = call_model(prompt).strip()
 
     # Save to outputs/summary.txt
     os.makedirs("outputs", exist_ok=True)

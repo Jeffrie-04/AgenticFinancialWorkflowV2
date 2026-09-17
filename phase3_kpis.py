@@ -1,7 +1,7 @@
 import json
 import pandas as pd
 
-from bedrock_client import get_bedrock_client, clean_json_text, parse_json_response
+from bedrock_client import call_model, clean_json_text, parse_json_response
 
 
 def main():
@@ -70,31 +70,7 @@ TRANSACTION DATA:
 YOUR RESPONSE MUST START WITH {{ AND END WITH }}. Nothing else."""
 
 
-    # Configure timeout
-    bedrock = get_bedrock_client()
-
-    # Call Claude Haiku since Titan was having issues reading the large input
-    response = bedrock.invoke_model(
-        modelId='us.anthropic.claude-haiku-4-5-20251001-v1:0',
-        contentType='application/json',
-        accept='application/json',
-        body=json.dumps({
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 8000,
-            "temperature": 0,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
-        })
-    )
-
-    # Parse response
-    response_body = json.loads(response['body'].read())
-    text = response_body['content'][0]['text']
-
+    text = call_model(prompt)
 
     # JSON CLEANING
     text = clean_json_text(text)

@@ -196,3 +196,7 @@ with st.sidebar:
                 st.text(result.stderr)
         if result.returncode == 0:
             st.rerun()
+
+
+# Command to run the app:
+# ./venv/bin/streamlit run app.py
