@@ -1,0 +1,50 @@
+{
+  "kpis": {
+    "total_spend": 83130.88,
+    "total_income": 83650.0,
+    "top_merchants": [
+      "ADP Payroll",
+      "Regus Office Space",
+      "Contract Attorney Payment"
+    ],
+    "average_expense": 2771.03,
+    "net_cash_flow": 519.12,
+    "status": "surplus",
+    "spend_by_category": {
+      "Utilities": {
+        "amount": 79712.98,
+        "pct_of_spend": 95.9
+      },
+      "Shopping": {
+        "amount": 2671.55,
+        "pct_of_spend": 3.2
+      },
+      "Dining": {
+        "amount": 405.55,
+        "pct_of_spend": 0.5
+      },
+      "Other": {
+        "amount": 340.8,
+        "pct_of_spend": 0.4
+      }
+    },
+    "income_concentration": {
+      "top_client": "Mercer Estate Settlement",
+      "top_client_pct": 50.2,
+      "top3_clients_pct": 86.7,
+      "num_income_sources": 5
+    },
+    "fixed_vs_discretionary": {
+      "fixed_spend": 79712.98,
+      "discretionary_spend": 3417.9,
+      "fixed_pct": 95.9
+    },
+    "burn_rate": {
+      "period_days": 27,
+      "daily_avg_spend": 3078.92,
+      "monthly_projection": 92367.64,
+      "unparseable_dates": 0,
+      "runway_note": "Runway not computed: requires a starting cash balance."
+    }
+  }
+}

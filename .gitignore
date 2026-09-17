@@ -19,3 +19,7 @@ venv/
 # Optional: don't commit generated outputs (your call)
 # outputs/
 
+# User-uploaded CSVs and their pipeline outputs — real, unredacted financial
+# data, unlike the curated businesses/<demo>/ fixtures which stay tracked.
+businesses/_uploads/
+

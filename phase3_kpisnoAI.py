@@ -15,6 +15,7 @@ OUTPUT: outputs/kpis.json
 """
 
 import json
+import os
 from collections import defaultdict
 from datetime import datetime
 
@@ -192,8 +193,8 @@ def validate(kpis, transactions):
         raise ValueError(f"category pct sum off: {pct_sum}")
 
 
-def main():
-    transactions = load_transactions()
+def main(outputs_dir="outputs"):
+    transactions = load_transactions(os.path.join(outputs_dir, "categorized.json"))
 
     kpis = {}
     kpis.update(compute_core_kpis(transactions))          # the original 4
@@ -205,9 +206,10 @@ def main():
 
     validate(kpis, transactions)
 
-    with open("outputs/kpis.json", "w") as f:
+    kpis_path = os.path.join(outputs_dir, "kpis.json")
+    with open(kpis_path, "w") as f:
         json.dump({"kpis": kpis}, f, indent=2)
-    print("KPIs saved to outputs/kpis.json")
+    print(f"KPIs saved to {kpis_path}")
     return kpis
 
 

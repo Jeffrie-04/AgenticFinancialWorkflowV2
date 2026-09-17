@@ -1,12 +1,13 @@
 import json
+import os
 import pandas as pd
 
 from bedrock_client import call_model, clean_json_text, parse_json_response
 
 
-def main():
+def main(csv_path="data/transactiondata.csv", outputs_dir="outputs"):
     # Load transaction data
-    df = pd.read_csv('data/transactiondata.csv').head(5) # TODO: Remove .head(5) for full dataset
+    df = pd.read_csv(csv_path)
 
     # RISEN Prompt
     prompt = f"""ROLE: You are an expert financial transaction categorization agent for small business accounting.
@@ -110,7 +111,7 @@ YOUR RESPONSE MUST START WITH {{ AND END WITH }}. Nothing else."""
     print()
 
     # Save
-    with open('outputs/categorized.json', 'w') as f:
+    with open(os.path.join(outputs_dir, 'categorized.json'), 'w') as f:
         json.dump(categorized, f, indent=2)
 
 

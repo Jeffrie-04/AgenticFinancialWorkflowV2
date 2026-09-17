@@ -3,6 +3,7 @@ import json
 import boto3
 from botocore.config import Config
 from openai import OpenAI
+from anthropic import Anthropic
 
 try:
     from dotenv import load_dotenv
@@ -20,6 +21,7 @@ MODEL_PROVIDER = os.environ.get("MODEL_PROVIDER", "openai")
 
 OPENAI_MODEL_ID = "us.openai.gpt-5.6-terra"
 CLAUDE_MODEL_ID = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+ANTHROPIC_MODEL_ID = "claude-haiku-4-5"  # direct API alias — no date suffix
 
 CLAUDE_CONFIG = Config(read_timeout=180, connect_timeout=60, retries={'max_attempts': 2})
 
@@ -51,9 +53,25 @@ def _call_claude(prompt):
     return response_body['content'][0]['text']
 
 
+def _call_anthropic_direct(prompt):
+    client = Anthropic()  # reads ANTHROPIC_API_KEY from the environment
+    # NOTE: `temperature` is not a valid Messages.create() parameter in the
+    # installed anthropic SDK (1.6.0) — it's been removed from the Messages
+    # API entirely, not just rejected for certain models. Confirmed via
+    # direct signature introspection, not assumed.
+    response = client.messages.create(
+        model=ANTHROPIC_MODEL_ID,
+        max_tokens=8000,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return response.content[0].text
+
+
 def call_model(prompt):
     if MODEL_PROVIDER == "claude":
         return _call_claude(prompt)
+    if MODEL_PROVIDER == "anthropic_direct":
+        return _call_anthropic_direct(prompt)
     return _call_openai(prompt)
 
 

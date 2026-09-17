@@ -1,12 +1,13 @@
 import json
+import os
 import pandas as pd
 
 from bedrock_client import call_model, clean_json_text, parse_json_response
 
 
-def main():
+def main(csv_path="data/transactiondata.csv", outputs_dir="outputs"):
     # Load transaction data
-    df = pd.read_csv('data/transactiondata.csv')
+    df = pd.read_csv(csv_path)
     sample = df.head(5).to_string(index=False)
 
     # RAFT Prompt
@@ -56,7 +57,7 @@ YOUR RESPONSE MUST START WITH {{ AND END WITH }}. Nothing else.
             plan = {"plan_steps": plan["steps"]}
 
     # Save
-    with open('outputs/plan.json', 'w') as f:
+    with open(os.path.join(outputs_dir, 'plan.json'), 'w') as f:
         json.dump(plan, f, indent=2)
 
 

@@ -1,3 +1,5 @@
+import argparse
+import os
 import sys
 
 import phase2_plan
@@ -14,12 +16,24 @@ PHASES = [
     ("Phase 3 - Reflection", phase3_reflection),
 ]
 
+NEEDS_CSV = {phase2_plan, phase3_categorized}
 
-def main():
+
+def main(business_dir=None):
+    if business_dir is not None:
+        csv_path = os.path.join(business_dir, "transactions.csv")
+        outputs_dir = os.path.join(business_dir, "outputs")
+        os.makedirs(outputs_dir, exist_ok=True)
+
     for name, module in PHASES:
         print(f"[run.py] Running: {name}")
         try:
-            module.main()
+            if business_dir is None:
+                module.main()
+            elif module in NEEDS_CSV:
+                module.main(csv_path=csv_path, outputs_dir=outputs_dir)
+            else:
+                module.main(outputs_dir=outputs_dir)
         except SystemExit as e:
             code = e.code if isinstance(e.code, int) else 1
             print(f"[run.py] FAILED at {name}: script exited (code={code}). "
@@ -34,4 +48,8 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--business-dir", default=None,
+                         help="Run against businesses/<name>/ instead of the legacy data/outputs paths.")
+    args = parser.parse_args()
+    sys.exit(main(business_dir=args.business_dir))

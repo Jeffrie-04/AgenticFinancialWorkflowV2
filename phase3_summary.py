@@ -4,8 +4,8 @@ import os
 from bedrock_client import call_model
 
 
-def main():
-    with open("outputs/kpis.json", "r") as f:
+def main(outputs_dir="outputs"):
+    with open(os.path.join(outputs_dir, "kpis.json"), "r") as f:
         kpis = json.load(f)
 
     # -------------------------------
@@ -40,9 +40,9 @@ KPIS:
     summary_text = call_model(prompt).strip()
 
     # Save to outputs/summary.txt
-    os.makedirs("outputs", exist_ok=True)
+    os.makedirs(outputs_dir, exist_ok=True)
 
-    with open("outputs/summary.txt", "w") as f:
+    with open(os.path.join(outputs_dir, "summary.txt"), "w") as f:
         f.write(summary_text)
 
 

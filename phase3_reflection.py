@@ -4,9 +4,9 @@ import os
 from bedrock_client import call_model
 
 
-def main():
+def main(outputs_dir="outputs"):
     # Load inputs
-    with open("outputs/kpis.json", "r") as f:
+    with open(os.path.join(outputs_dir, "kpis.json"), "r") as f:
         kpis = json.load(f)
     kpis_json = json.dumps(kpis, indent=2)
 
@@ -59,11 +59,12 @@ KPIS:
     reflection_text = call_model(reflection_prompt).strip()
 
     # Save output
-    os.makedirs("outputs", exist_ok=True)
-    with open("outputs/reflection.txt", "w") as f:
+    os.makedirs(outputs_dir, exist_ok=True)
+    reflection_path = os.path.join(outputs_dir, "reflection.txt")
+    with open(reflection_path, "w") as f:
         f.write(reflection_text)
 
-    print("Reflection saved to outputs/reflection.txt")
+    print(f"Reflection saved to {reflection_path}")
 
 
 if __name__ == "__main__":
