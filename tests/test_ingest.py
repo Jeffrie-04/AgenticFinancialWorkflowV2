@@ -280,27 +280,36 @@ def test_refund_matching_uses_normalized_merchant():
 
 
 def _refund_outcomes(name):
-    """Row-order-independent view: (merchant, amount) -> outcome."""
+    """Row-order-independent view: (merchant, direction, amount) -> outcome.
+    Ids are content hashes, so the same row has the same id in both files and
+    refund_of can be compared directly."""
     rows = ingest.ingest_rows(fixture(name), SourceConfig()).rows
-    by_id = {t.id: t for t in rows}
-    return {
-        (t.merchant, t.amount): (t.status, t.reason, t.is_refund,
-                                 by_id[t.refund_of].amount if t.refund_of else None)
-        for t in rows
-    }
+    out = {(t.merchant, t.direction, t.amount): (t.status, t.reason, t.is_refund, t.refund_of)
+           for t in rows}
+    assert len(out) == len(rows)  # keys must not collide
+    return out
+
+
+def _id_of(name, merchant, direction, amount):
+    rows = ingest.ingest_rows(fixture(name), SourceConfig()).rows
+    return next(t.id for t in rows
+                if (t.merchant, t.direction, t.amount) == (merchant, direction, Decimal(amount)))
 
 
 def test_same_day_competing_credits_are_ambiguous():
     out = _refund_outcomes("refunds_sameday_a.csv")
     ambiguous = (REVIEW, "refund_ambiguous", False, None)
-    assert out[("Home Depot", Decimal("60.00"))] == ambiguous
-    assert out[("Home Depot", Decimal("50.00"))] == ambiguous
+    assert out[("Home Depot", CREDIT, Decimal("60.00"))] == ambiguous
+    assert out[("Home Depot", CREDIT, Decimal("50.00"))] == ambiguous
 
 
 def test_same_day_credits_that_fit_are_allocated_independent_of_row_order():
-    out = _refund_outcomes("refunds_sameday_a.csv")
-    assert out[("Lowes", Decimal("30.00"))] == (OK, None, True, Decimal("30.00"))
-    assert out[("Lowes", Decimal("20.00"))] == (OK, None, True, Decimal("20.00"))
+    name = "refunds_sameday_a.csv"
+    out = _refund_outcomes(name)
+    assert out[("Lowes", CREDIT, Decimal("30.00"))] == (
+        OK, None, True, _id_of(name, "Lowes", DEBIT, "30.00"))
+    assert out[("Lowes", CREDIT, Decimal("20.00"))] == (
+        OK, None, True, _id_of(name, "Lowes", DEBIT, "20.00"))
 
 
 def test_same_day_refund_outcomes_identical_in_both_row_orders():

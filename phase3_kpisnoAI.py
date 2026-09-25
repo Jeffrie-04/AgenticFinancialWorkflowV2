@@ -8,30 +8,42 @@ this pipeline handles fuzzy work (categorization, summaries); money math has
 to be correct and reproducible, so it lives here. That separation is
 deliberate — an LLM's arithmetic can't be trusted for financial figures.
 
-INPUT : outputs/categorized.json  (produced by the LLM categorizer)
-        Each transaction: {date, merchant, amount, category}
-        CONVENTION: negative amount = income, positive amount = expense.
+INPUT : outputs/ingested.json     (validated source rows from afw/ingest.py)
+        Amount, direction, date, merchant and status come ONLY from here.
+        outputs/categorized.json  (produced by the LLM categorizer)
+        Only the category is taken from here, joined on (date, merchant,
+        |amount|); the LLM's echoed amounts and signs are never used.
 OUTPUT: outputs/kpis.json
+        outputs/data_quality.json  ("kpi_join" section added)
 """
 
 import json
 import os
-from collections import defaultdict
-from datetime import datetime
+from collections import Counter, defaultdict
+from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
+
+from afw.models import Category, Direction, Status, normalize_merchant
 
 # Categories treated as committed/fixed monthly obligations vs discretionary.
 # NOTE: this is a category-based heuristic, not true recurrence detection.
 # Detecting real month-over-month recurrence needs multi-month data, which a
 # single statement doesn't give. Utilities here holds SaaS, rent, payroll,
 # insurance, and bills — costs owed regardless of revenue.
-FIXED_CATEGORIES = {"Utilities"}
-DISCRETIONARY_CATEGORIES = {"Dining", "Shopping", "Other"}
+# (.value: rows carry plain strings, and a str-Enum member hashes by name.)
+FIXED_CATEGORIES = {Category.UTILITIES.value}
+DISCRETIONARY_CATEGORIES = {Category.DINING.value, Category.SHOPPING.value, Category.OTHER.value}
+
+# Reasons a source row that passed ingest is still left out of the KPIs.
+JOIN_PROBLEMS = ("join_ambiguous", "join_missing", "category_invalid", "refund_original_excluded")
 
 
 def parse_date(raw):
     """Parse a statement date. Primary format MM-DD-YYYY; falls back to ISO.
-    Returns a datetime, or None if unparseable (so bad rows are flagged, not
-    silently dropped) — real statements contain malformed dates."""
+    Returns a datetime (or the date itself if already one), or None if
+    unparseable (so bad rows are flagged, not silently dropped)."""
+    if isinstance(raw, date):
+        return raw
     for fmt in ("%m-%d-%Y", "%Y-%m-%d"):
         try:
             return datetime.strptime(str(raw), fmt)
@@ -46,11 +58,125 @@ def load_transactions(path="outputs/categorized.json"):
     return data["categorized"]
 
 
+def load_ingested(path="outputs/ingested.json"):
+    with open(path, "r") as f:
+        data = json.load(f)
+    return data["transactions"]
+
+
+def _categorized_key(t):
+    """(date, merchant key, |amount|) for an LLM-echoed row, or None if the
+    LLM mangled it. The LLM may reformat dates or flip signs; neither matters."""
+    d = parse_date(t.get("date"))
+    try:
+        amount = abs(Decimal(str(t["amount"])))
+    except (InvalidOperation, KeyError):
+        return None
+    if d is None or not amount.is_finite():
+        return None
+    d = d.date() if isinstance(d, datetime) else d
+    return d, normalize_merchant(str(t.get("merchant", ""))), amount
+
+
+def join_categories(ingested, categorized):
+    """Attach the LLM's category to each OK source row. Returns (rows, report).
+
+    A row is left out of the KPIs (NEEDS_REVIEW, counted, never silently
+    dropped) when its key appears more than once in the source, the LLM rows
+    for it disagree, no LLM row matches, or the category isn't a Category.
+    A refund takes no category of its own — it is netted against its
+    original DEBIT — so it is left out only if that DEBIT is.
+    """
+    # TODO(phase 2): categorizer returns {id, category} only; replace this key
+    # join with an id lookup.
+    report = Counter()
+    by_key = defaultdict(list)
+    for c in categorized:
+        key = _categorized_key(c)
+        if key is None:
+            report["categorized_invalid"] += 1
+        else:
+            by_key[key].append(c)
+
+    usable = []
+    for t in ingested:
+        if t["status"] == Status.REJECTED.value:
+            continue
+        row = {**t, "date": date.fromisoformat(t["date"])}
+        usable.append((row, (row["date"], normalize_merchant(row["merchant"]), Decimal(row["amount"]))))
+    source_keys = Counter(key for _, key in usable)
+    report["categorized_unmatched"] = sum(len(v) for k, v in by_key.items() if k not in source_keys)
+
+    excluded = []
+
+    def exclude(row, reason):
+        excluded.append({**row, "status": Status.NEEDS_REVIEW.value, "reason": reason})
+        report[reason] += 1
+
+    joined = []
+    for row, key in usable:
+        if row["status"] != Status.OK.value:
+            continue  # ingest already marked it NEEDS_REVIEW and counted it
+        if row["is_refund"]:
+            joined.append(row)
+            continue
+        matches = by_key.get(key, [])
+        categories = {str(m.get("category")) for m in matches}
+        if source_keys[key] > 1 or len(categories) > 1:
+            exclude(row, "join_ambiguous")
+        elif not matches:
+            exclude(row, "join_missing")
+        elif categories.pop() not in {c.value for c in Category}:
+            exclude(row, "category_invalid")
+        else:
+            report["categorized_duplicate"] += len(matches) - 1
+            joined.append({**row, "category": matches[0]["category"]})
+
+    kept_debits = {r["id"] for r in joined if not r["is_refund"]}
+    rows = []
+    for row in joined:
+        if row["is_refund"] and row["refund_of"] not in kept_debits:
+            exclude(row, "refund_original_excluded")
+        else:
+            rows.append(row)
+
+    total = lambda d: str(sum((Decimal(r["amount"]) for r in excluded if r["direction"] == d),
+                              Decimal("0.00")))
+    return rows, {
+        "rows_in_kpis": len(rows),
+        **{k: report[k] for k in JOIN_PROBLEMS},
+        "categorized_unmatched": report["categorized_unmatched"],
+        "categorized_duplicate": report["categorized_duplicate"],
+        "categorized_invalid": report["categorized_invalid"],
+        "excluded_total": {
+            "debit": total(Direction.DEBIT.value),
+            "credit": total(Direction.CREDIT.value),
+            "rows": len(excluded),
+        },
+    }
+
+
+def apply_refunds(transactions):
+    """Net each refund against the DEBIT it refunds, so a returned purchase
+    lowers that DEBIT's spend (same category, same merchant) instead of
+    counting as income. Refund rows stay in the list; split_income_expense
+    skips them."""
+    refunded = defaultdict(float)
+    for t in transactions:
+        if t.get("is_refund"):
+            refunded[t["refund_of"]] += float(t["amount"])
+    return [{**t, "amount": float(t["amount"]) - refunded[t["id"]]} if t.get("id") in refunded else t
+            for t in transactions]
+
+
 def split_income_expense(transactions):
-    """Convention: amount < 0 is income, amount > 0 is an expense."""
+    """CREDIT is income, DEBIT is an expense. Refund CREDITs are neither:
+    apply_refunds() has already netted them against their DEBIT."""
     income, expense = [], []
     for t in transactions:
-        (income if float(t["amount"]) < 0 else expense).append(t)
+        if t.get("is_refund"):
+            continue
+        (income if t["direction"] == Direction.CREDIT.value else expense).append(t)
     return income, expense
 
 
@@ -193,8 +319,23 @@ def validate(kpis, transactions):
         raise ValueError(f"category pct sum off: {pct_sum}")
 
 
+def record_join_report(outputs_dir, report):
+    """Add the join report to data_quality.json, keeping ingest's section."""
+    dq_path = os.path.join(outputs_dir, "data_quality.json")
+    dq = {}
+    if os.path.exists(dq_path):
+        with open(dq_path) as f:
+            dq = json.load(f)
+    dq["kpi_join"] = report
+    with open(dq_path, "w") as f:
+        json.dump(dq, f, indent=2)
+
+
 def main(outputs_dir="outputs"):
-    transactions = load_transactions(os.path.join(outputs_dir, "categorized.json"))
+    ingested = load_ingested(os.path.join(outputs_dir, "ingested.json"))
+    categorized = load_transactions(os.path.join(outputs_dir, "categorized.json"))
+    transactions, join_report = join_categories(ingested, categorized)
+    transactions = apply_refunds(transactions)
 
     kpis = {}
     kpis.update(compute_core_kpis(transactions))          # the original 4
@@ -209,7 +350,10 @@ def main(outputs_dir="outputs"):
     kpis_path = os.path.join(outputs_dir, "kpis.json")
     with open(kpis_path, "w") as f:
         json.dump({"kpis": kpis}, f, indent=2)
-    print(f"KPIs saved to {kpis_path}")
+    record_join_report(outputs_dir, join_report)
+    left_out = join_report["excluded_total"]["rows"]
+    print(f"KPIs saved to {kpis_path} ({join_report['rows_in_kpis']} rows used, "
+          f"{left_out} left out at join -> data_quality.json)")
     return kpis
 
 

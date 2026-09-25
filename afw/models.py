@@ -41,6 +41,16 @@ class Status(str, Enum):
     REJECTED = "REJECTED"
 
 
+class Category(str, Enum):
+    """The only valid categories. LLM output is validated against this; an
+    unknown value makes the row NEEDS_REVIEW, never a guessed category."""
+    INCOME = "Income"
+    UTILITIES = "Utilities"
+    SHOPPING = "Shopping"
+    DINING = "Dining"
+    OTHER = "Other"
+
+
 class SignConvention(str, Enum):
     NEGATIVE_IS_CREDIT = "negative_is_credit"  # card-statement style: -6500.0 = money in
     POSITIVE_IS_CREDIT = "positive_is_credit"  # bank-account style: +6500.0 = money in
