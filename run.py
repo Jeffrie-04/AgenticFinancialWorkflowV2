@@ -7,8 +7,10 @@ import phase3_categorized
 import phase3_kpisnoAI
 import phase3_summary
 import phase3_reflection
+from afw import ingest
 
 PHASES = [
+    ("Ingest", ingest),
     ("Phase 2 - Plan", phase2_plan),
     ("Phase 3 - Categorize", phase3_categorized),
     ("Phase 3 - KPIs (no AI)", phase3_kpisnoAI),
@@ -16,7 +18,7 @@ PHASES = [
     ("Phase 3 - Reflection", phase3_reflection),
 ]
 
-NEEDS_CSV = {phase2_plan, phase3_categorized}
+NEEDS_CSV = {ingest, phase2_plan, phase3_categorized}
 
 
 def main(business_dir=None):

@@ -464,6 +464,19 @@ class TestJoinGroups:
         assert [(r["id"], r["category"]) for r in rows] == [("paper", "Shopping"), ("meal", "Dining")]
         assert report["join_group_inconsistent"] == 0
 
+    def test_echoed_rejected_row_makes_its_group_inconsistent(self):
+        # Pins accepted choice 4: the LLM saw the raw CSV, so it echoes a row
+        # ingest REJECTED (here amount_zero). Its "0" parses, lands in the
+        # (date, merchant) group, and the group's LLM count exceeds its
+        # purchases -> the good row in that group is left out too.
+        rows, report = kpis_mod.join_categories(
+            [RENT[0], ing("z", "Landlord", None, None, status="REJECTED", reason="amount_zero")],
+            [RENT[1], cat("Landlord", 0, "Utilities")])
+        assert rows == []
+        assert report["join_group_inconsistent"] == 1
+        assert report["categorized_unmatched"] == 1
+        assert report["excluded_total"] == {"debit": "1000.00", "credit": "0.00", "rows": 1}
+
     def test_group_problem_does_not_spread_to_other_days_or_merchants(self):
         rows, report = kpis_mod.join_categories(
             [ing("a", "Costco", "10.00", "DEBIT"),
