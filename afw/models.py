@@ -15,11 +15,19 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 DESCRIPTION_MAX = 500
+MAX_AMOUNT = Decimal("1000000000.00")
 
 # strftime directives a source's date_format may use, and the exact shape each
 # must have in the input. Shape is checked before strptime so "2024-10-06" in a
 # MM-DD-YYYY source is date_format (wrong layout), not date_invalid (Feb 30).
 DATE_DIRECTIVES = {"%m": r"\d{2}", "%d": r"\d{2}", "%Y": r"\d{4}", "%y": r"\d{2}"}
+
+
+def normalize_merchant(name):
+    """The one merchant-comparison key: stripped, internal whitespace
+    collapsed, casefolded. Used for refund matching and the KPI category join;
+    the stored `merchant` field is only stripped."""
+    return " ".join(name.split()).casefold()
 
 
 class Direction(str, Enum):
@@ -39,18 +47,22 @@ class SignConvention(str, Enum):
 
 
 def date_format_regex(fmt):
-    """Translate a supported date_format into a full-match regex."""
-    pattern, i = "", 0
+    """Translate a supported date_format into a full-match regex. The format
+    must name exactly one year (%Y or %y), one month and one day."""
+    pattern, used, i = "", [], 0
     while i < len(fmt):
         token = fmt[i:i + 2]
         if token in DATE_DIRECTIVES:
             pattern += DATE_DIRECTIVES[token]
+            used.append("%Y" if token == "%y" else token)
             i += 2
         elif fmt[i] == "%":
             raise ValueError(f"unsupported date directive {token!r} in {fmt!r}")
         else:
             pattern += re.escape(fmt[i])
             i += 1
+    if sorted(used) != ["%Y", "%d", "%m"]:
+        raise ValueError(f"date_format {fmt!r} must contain exactly one year, month and day")
     return re.compile(pattern)
 
 
@@ -92,8 +104,13 @@ class Transaction(BaseModel):
         if self.status != Status.REJECTED:
             if self.date is None or self.direction is None or self.amount is None:
                 raise ValueError("usable rows need date, direction and amount")
-            if self.amount <= 0 or self.amount.as_tuple().exponent != -2:
-                raise ValueError(f"amount must be > 0 with 2 decimal places, got {self.amount}")
+            if not 0 < self.amount <= MAX_AMOUNT or self.amount.as_tuple().exponent != -2:
+                raise ValueError(f"amount must be in (0, {MAX_AMOUNT}] with 2 decimal places, "
+                                 f"got {self.amount}")
+            if self.currency != "USD":
+                raise ValueError(f"usable rows must be USD, got {self.currency}")
+        if self.status == Status.OK and not self.merchant.strip():
+            raise ValueError("an OK row needs a merchant")
         if (self.status == Status.OK) != (self.reason is None):
             raise ValueError("reason is required unless status is OK, and only then")
         if self.is_refund and (self.direction != Direction.CREDIT or self.refund_of is None):

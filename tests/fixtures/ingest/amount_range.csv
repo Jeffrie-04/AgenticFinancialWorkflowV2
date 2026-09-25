@@ -1,0 +1,5 @@
+date,merchant,amount,description
+10-01-2024,Big Client,-1000000000.00,Max allowed
+10-02-2024,Big Client,-1000000000.01,One cent over
+10-03-2024,Vendor,1000000000.01,One cent over
+10-04-2024,Vendor,1234567890123456789012345678901234567890,Overflows Decimal context

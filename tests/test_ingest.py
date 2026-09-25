@@ -239,6 +239,106 @@ def test_rejected_row_requires_reason():
                     status=REJECTED)
 
 
+# ----------------------------------------- review hardening (post commit 2)
+
+def test_row_field_count_mismatch_rejected():
+    # An unquoted "1,234.56" splits into two fields; a short row is missing one.
+    rows = by_row(ingest.ingest_rows(fixture("field_count.csv"), SourceConfig()))
+    assert (rows[2].status, rows[2].reason, rows[2].amount) == (REJECTED, "row_field_count", None)
+    assert (rows[3].status, rows[3].reason) == (REJECTED, "row_field_count")
+    assert rows[4].status == OK
+
+
+def test_duplicate_header_fails_file():
+    with pytest.raises(ingest.IngestFailed, match="duplicate columns"):
+        ingest.ingest_rows(fixture("dup_header.csv"), SourceConfig())
+
+
+def test_duplicate_header_detected_after_normalization(tmp_path):
+    path = tmp_path / "t.csv"
+    path.write_text("date,merchant,Amount, amount \n10-01-2024,Shop,1.00,2.00\n")
+    with pytest.raises(ingest.IngestFailed, match="duplicate columns"):
+        ingest.ingest_rows(str(path), SourceConfig())
+
+
+def test_amount_out_of_range_rejected_not_crashed():
+    rows = by_row(ingest.ingest_rows(fixture("amount_range.csv"), SourceConfig()))
+    assert (rows[2].status, rows[2].amount) == (OK, Decimal("1000000000.00"))  # the max itself
+    for line in (3, 4, 5):  # one cent over, both signs; 40 digits would overflow quantize
+        assert (rows[line].status, rows[line].reason) == (REJECTED, "amount_out_of_range")
+
+
+def test_normalize_merchant():
+    from afw.models import normalize_merchant
+    assert normalize_merchant("  HOME   DEPOT ") == normalize_merchant("Home Depot") == "home depot"
+
+
+def test_refund_matching_uses_normalized_merchant():
+    rows = by_row(ingest.ingest_rows(fixture("merchant_normalize.csv"), SourceConfig()))
+    assert rows[3].is_refund and rows[3].refund_of == rows[2].id
+    assert rows[3].merchant == "HOME   DEPOT"  # stored value is only stripped
+
+
+def _refund_outcomes(name):
+    """Row-order-independent view: (merchant, amount) -> outcome."""
+    rows = ingest.ingest_rows(fixture(name), SourceConfig()).rows
+    by_id = {t.id: t for t in rows}
+    return {
+        (t.merchant, t.amount): (t.status, t.reason, t.is_refund,
+                                 by_id[t.refund_of].amount if t.refund_of else None)
+        for t in rows
+    }
+
+
+def test_same_day_competing_credits_are_ambiguous():
+    out = _refund_outcomes("refunds_sameday_a.csv")
+    ambiguous = (REVIEW, "refund_ambiguous", False, None)
+    assert out[("Home Depot", Decimal("60.00"))] == ambiguous
+    assert out[("Home Depot", Decimal("50.00"))] == ambiguous
+
+
+def test_same_day_credits_that_fit_are_allocated_independent_of_row_order():
+    out = _refund_outcomes("refunds_sameday_a.csv")
+    assert out[("Lowes", Decimal("30.00"))] == (OK, None, True, Decimal("30.00"))
+    assert out[("Lowes", Decimal("20.00"))] == (OK, None, True, Decimal("20.00"))
+
+
+def test_same_day_refund_outcomes_identical_in_both_row_orders():
+    assert _refund_outcomes("refunds_sameday_a.csv") == _refund_outcomes("refunds_sameday_b.csv")
+
+
+@pytest.mark.parametrize("fmt", ["%m-%d", "%m-%d-%Y-%Y", "%m-%d-%Y-%y", "%m-%m-%Y", "%d-%Y"])
+def test_date_format_needs_one_year_month_day(fmt):
+    with pytest.raises(ValidationError):
+        SourceConfig(date_format=fmt)
+
+
+BASE_OK = dict(id="x-0", source_file="f.csv", source_row=2, account_id="default",
+               date=date(2024, 10, 1), amount=Decimal("5.00"), direction=DEBIT,
+               merchant="Shop", status=OK)
+
+
+@pytest.mark.parametrize("override", [
+    {"merchant": " "},
+    {"merchant": ""},
+    {"currency": "EUR"},
+    {"amount": Decimal("1000000000.01")},
+])
+def test_model_enforces_contract_on_direct_construction(override):
+    with pytest.raises(ValidationError):
+        Transaction(**{**BASE_OK, **override})
+
+
+def test_model_allows_blank_merchant_when_needs_review():
+    t = Transaction(**{**BASE_OK, "merchant": "", "status": REVIEW, "reason": "merchant_blank"})
+    assert t.status == REVIEW
+
+
+def test_mixed_review_and_reject_at_exactly_ten_percent_passes():
+    result = ingest.ingest_file(fixture("threshold_mixed.csv"), SourceConfig())
+    assert result.counts == {"rows": 10, "ok": 8, "needs_review": 1, "rejected": 1}
+
+
 # -------------------------------------------------------- main() / outputs
 
 def test_main_writes_ingested_and_data_quality(tmp_path):

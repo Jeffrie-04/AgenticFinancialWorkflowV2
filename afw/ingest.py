@@ -25,8 +25,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 
-from afw.models import (DESCRIPTION_MAX, Direction, SignConvention, SourceConfig,
-                        Status, Transaction, date_format_regex)
+from afw.models import (DESCRIPTION_MAX, MAX_AMOUNT, Direction, SignConvention, SourceConfig,
+                        Status, Transaction, date_format_regex, normalize_merchant)
 
 REJECT_THRESHOLD = 0.10  # file fails when REJECTED / rows is strictly above this
 REQUIRED_COLUMNS = {"date", "merchant", "amount"}
@@ -74,7 +74,9 @@ def config_for(csv_path):
 
 
 def read_rows(path):
-    """Yield (line_no, {column: value}) for non-blank rows, plus decode warnings.
+    """-> ([(line_no, {column: value} or None)], warnings) for non-blank rows.
+    None marks a row whose field count doesn't match the header (e.g. an
+    unquoted "1,234.56"), which can't be mapped to columns safely.
     UTF-8 (BOM stripped) first; cp1252 fallback for Excel-on-Windows exports."""
     warnings = []
     with open(path, "rb") as f:
@@ -90,6 +92,9 @@ def read_rows(path):
 
     reader = csv.reader(io.StringIO(text, newline=""))
     header = [h.strip().lower() for h in next(reader, [])]
+    duplicates = sorted(h for h, n in Counter(header).items() if n > 1)
+    if duplicates:
+        raise IngestFailed(f"{os.path.basename(path)}: duplicate columns {duplicates}")
     missing = REQUIRED_COLUMNS - set(header)
     if missing:
         raise IngestFailed(f"{os.path.basename(path)}: missing columns {sorted(missing)}")
@@ -98,8 +103,8 @@ def read_rows(path):
     for values in reader:
         if not any(v.strip() for v in values):  # empty line or ",,,,"
             continue
-        values += [""] * (len(header) - len(values))
-        rows.append((reader.line_num, dict(zip(header, values))))
+        mapped = dict(zip(header, values)) if len(values) == len(header) else None
+        rows.append((reader.line_num, mapped))
     return rows, warnings
 
 
@@ -118,6 +123,8 @@ def parse_amount(raw, cfg):
         return None, None, "amount_unparseable"
     if value == 0:
         return None, None, "amount_zero"
+    if abs(value) > MAX_AMOUNT:  # also keeps quantize() inside Decimal's precision
+        return None, None, "amount_out_of_range"
     if value.quantize(CENT) != value:
         return None, None, "amount_precision"
 
@@ -142,16 +149,18 @@ def parse_row(raw, line_no, source_file, cfg):
     """One CSV row -> (Transaction fields, description_was_truncated). Checks
     run amount, currency, date, merchant; the first failure is the reason.
     The id is assigned later, once duplicates in the file are known."""
-    description = raw.get("description", "").strip()
-    truncated = len(description) > DESCRIPTION_MAX
     fields = {
         "source_file": source_file,
         "source_row": line_no,
         "account_id": cfg.account_id,
-        "merchant": raw.get("merchant", "").strip(),
-        "description": description[:DESCRIPTION_MAX],
         "status": Status.OK,
     }
+    if raw is None:
+        return {**fields, "status": Status.REJECTED, "reason": "row_field_count"}, False
+
+    description = raw.get("description", "").strip()
+    truncated = len(description) > DESCRIPTION_MAX
+    fields.update(merchant=raw["merchant"].strip(), description=description[:DESCRIPTION_MAX])
 
     def reject(reason):
         return {**fields, "status": Status.REJECTED, "reason": reason}, truncated
@@ -187,31 +196,47 @@ def assign_ids(parsed):
 
 
 def detect_refunds(parsed):
-    """A CREDIT is a refund when the same merchant (case/space-insensitive) has
-    an OK DEBIT on the same day or earlier with enough unrefunded balance left;
+    """A CREDIT is a refund when the same merchant (normalize_merchant) has an
+    OK DEBIT on the same day or earlier with enough unrefunded balance left;
     refunds use up the oldest such DEBIT first. A CREDIT that only matches the
-    merchant, or only mentions a refund keyword, is NEEDS_REVIEW."""
+    merchant, or only mentions a refund keyword, is NEEDS_REVIEW. Outcomes
+    never depend on row order within a day."""
     usable = [f for f in parsed if f["status"] == Status.OK]
-    merchants_with_debits = {f["merchant"].casefold() for f in usable
-                             if f["direction"] == Direction.DEBIT}
+    merchant_key = lambda f: normalize_merchant(f["merchant"])
+    merchants_with_debits = {merchant_key(f) for f in usable if f["direction"] == Direction.DEBIT}
     balances = defaultdict(list)  # merchant -> [[debit fields, remaining], ...] oldest first
+    canonical = lambda f: (-f["amount"], f["id"])  # row-order-free tiebreak within a day
 
-    # Same-day DEBITs sort before CREDITs so "same day counts" holds regardless
-    # of row order within the day.
-    order = sorted(usable, key=lambda f: (f["date"], f["direction"] == Direction.CREDIT, f["source_row"]))
-    for f in order:
-        key = f["merchant"].casefold()
+    days = defaultdict(lambda: ([], defaultdict(list)))  # date -> (debits, merchant -> credits)
+    for f in usable:
+        debits, credits = days[f["date"]]
         if f["direction"] == Direction.DEBIT:
-            balances[key].append([f, f["amount"]])
-            continue
-        match = next((b for b in balances[key] if b[1] >= f["amount"]), None)
-        if match:
-            match[1] -= f["amount"]
-            f.update(is_refund=True, refund_of=match[0]["id"])
-        elif key in merchants_with_debits:
-            f.update(status=Status.NEEDS_REVIEW, reason="refund_merchant_match_only")
-        elif REFUND_KEYWORDS.search(f"{f['merchant']} {f['description']}"):
-            f.update(status=Status.NEEDS_REVIEW, reason="refund_keyword_only")
+            debits.append(f)
+        else:
+            credits[merchant_key(f)].append(f)
+
+    for day in sorted(days):
+        debits, credits = days[day]
+        # Same-day DEBITs are added before that day's CREDITs: "same day counts".
+        for f in sorted(debits, key=canonical):
+            balances[merchant_key(f)].append([f, f["amount"]])
+        for merchant, group in credits.items():
+            available = sum(b[1] for b in balances[merchant])
+            if len(group) > 1 and 0 < available < sum(f["amount"] for f in group):
+                # Several same-day credits competing for one balance: which one
+                # is the refund can't be told from the data.
+                for f in group:
+                    f.update(status=Status.NEEDS_REVIEW, reason="refund_ambiguous")
+                continue
+            for f in sorted(group, key=canonical):
+                match = next((b for b in balances[merchant] if b[1] >= f["amount"]), None)
+                if match:
+                    match[1] -= f["amount"]
+                    f.update(is_refund=True, refund_of=match[0]["id"])
+                elif merchant in merchants_with_debits:
+                    f.update(status=Status.NEEDS_REVIEW, reason="refund_merchant_match_only")
+                elif REFUND_KEYWORDS.search(f"{f['merchant']} {f['description']}"):
+                    f.update(status=Status.NEEDS_REVIEW, reason="refund_keyword_only")
 
 
 def ingest_rows(path, cfg):

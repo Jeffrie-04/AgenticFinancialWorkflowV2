@@ -1,0 +1,11 @@
+date,merchant,amount,description
+10-01-2024,Vendor 1,11.00,Supplies
+10-02-2024,Vendor 2,12.00,Supplies
+10-03-2024,Vendor 3,13.00,Supplies
+10-04-2024,Vendor 4,14.00,Supplies
+10-05-2024,Vendor 5,15.00,Supplies
+10-06-2024,Vendor 6,16.00,Supplies
+10-07-2024,Vendor 7,17.00,Supplies
+10-08-2024,Vendor 8,18.00,Supplies
+10-09-2024,,19.00,Supplies
+10-10-2024,Vendor 10,abc,Supplies
