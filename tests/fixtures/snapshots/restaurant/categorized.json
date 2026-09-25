@@ -1,0 +1,286 @@
+{
+  "categorized": [
+    {
+      "date": "2024-10-03",
+      "merchant": "Card Batch Deposit",
+      "amount": -4820.5,
+      "category": "Income"
+    },
+    {
+      "date": "2024-10-07",
+      "merchant": "Card Batch Deposit",
+      "amount": -5340.75,
+      "category": "Income"
+    },
+    {
+      "date": "2024-10-10",
+      "merchant": "DoorDash Payout",
+      "amount": -2180.4,
+      "category": "Income"
+    },
+    {
+      "date": "2024-10-14",
+      "merchant": "Card Batch Deposit",
+      "amount": -6120.0,
+      "category": "Income"
+    },
+    {
+      "date": "2024-10-14",
+      "merchant": "Uber Eats Payout",
+      "amount": -1890.25,
+      "category": "Income"
+    },
+    {
+      "date": "2024-10-17",
+      "merchant": "Card Batch Deposit",
+      "amount": -5680.3,
+      "category": "Income"
+    },
+    {
+      "date": "2024-10-21",
+      "merchant": "Card Batch Deposit",
+      "amount": -6890.6,
+      "category": "Income"
+    },
+    {
+      "date": "2024-10-21",
+      "merchant": "DoorDash Payout",
+      "amount": -2410.8,
+      "category": "Income"
+    },
+    {
+      "date": "2024-10-24",
+      "merchant": "Private Event Deposit",
+      "amount": -3200.0,
+      "category": "Income"
+    },
+    {
+      "date": "2024-10-28",
+      "merchant": "Card Batch Deposit",
+      "amount": -6450.9,
+      "category": "Income"
+    },
+    {
+      "date": "2024-10-28",
+      "merchant": "Uber Eats Payout",
+      "amount": -1750.45,
+      "category": "Income"
+    },
+    {
+      "date": "2024-10-31",
+      "merchant": "Card Batch Deposit",
+      "amount": -7240.0,
+      "category": "Income"
+    },
+    {
+      "date": "2024-10-25",
+      "merchant": "Card Batch Deposit",
+      "amount": -5980.5,
+      "category": "Income"
+    },
+    {
+      "date": "2024-10-01",
+      "merchant": "Sysco Foods",
+      "amount": 4280.6,
+      "category": "Shopping"
+    },
+    {
+      "date": "2024-10-08",
+      "merchant": "Sysco Foods",
+      "amount": 3950.25,
+      "category": "Shopping"
+    },
+    {
+      "date": "2024-10-15",
+      "merchant": "Sysco Foods",
+      "amount": 4510.8,
+      "category": "Shopping"
+    },
+    {
+      "date": "2024-10-22",
+      "merchant": "Sysco Foods",
+      "amount": 4180.4,
+      "category": "Shopping"
+    },
+    {
+      "date": "2024-10-04",
+      "merchant": "US Foods",
+      "amount": 2340.15,
+      "category": "Shopping"
+    },
+    {
+      "date": "2024-10-18",
+      "merchant": "US Foods",
+      "amount": 2610.9,
+      "category": "Shopping"
+    },
+    {
+      "date": "2024-10-02",
+      "merchant": "Restaurant Depot",
+      "amount": 1875.5,
+      "category": "Shopping"
+    },
+    {
+      "date": "2024-10-16",
+      "merchant": "Restaurant Depot",
+      "amount": 1640.3,
+      "category": "Shopping"
+    },
+    {
+      "date": "2024-10-25",
+      "merchant": "Restaurant Depot",
+      "amount": 560.75,
+      "category": "Shopping"
+    },
+    {
+      "date": "2024-10-05",
+      "merchant": "Local Seafood Co",
+      "amount": 980.0,
+      "category": "Shopping"
+    },
+    {
+      "date": "2024-10-12",
+      "merchant": "Local Seafood Co",
+      "amount": 1120.0,
+      "category": "Shopping"
+    },
+    {
+      "date": "2024-10-09",
+      "merchant": "Craft Beverage Distributor",
+      "amount": 1450.75,
+      "category": "Shopping"
+    },
+    {
+      "date": "2024-10-23",
+      "merchant": "Craft Beverage Distributor",
+      "amount": 1680.2,
+      "category": "Shopping"
+    },
+    {
+      "date": "2024-10-19",
+      "merchant": "WebstaurantStore",
+      "amount": 890.4,
+      "category": "Shopping"
+    },
+    {
+      "date": "2024-10-26",
+      "merchant": "Home Depot",
+      "amount": 245.3,
+      "category": "Shopping"
+    },
+    {
+      "date": "2024-10-04",
+      "merchant": "Gusto Payroll",
+      "amount": 8940.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-18",
+      "merchant": "Gusto Payroll",
+      "amount": 9210.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-01",
+      "merchant": "Property Management LLC",
+      "amount": 5500.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-06",
+      "merchant": "National Grid Gas",
+      "amount": 680.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-06",
+      "merchant": "ConEd Electric",
+      "amount": 920.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-11",
+      "merchant": "Water & Sewer",
+      "amount": 245.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-13",
+      "merchant": "Verizon",
+      "amount": 180.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-07",
+      "merchant": "Ecolab",
+      "amount": 320.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-10",
+      "merchant": "Toast POS",
+      "amount": 165.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-10",
+      "merchant": "OpenTable",
+      "amount": 249.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-15",
+      "merchant": "QuickBooks Online",
+      "amount": 80.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-03",
+      "merchant": "Restaurant Insurance Co",
+      "amount": 1240.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-20",
+      "merchant": "Waste Management",
+      "amount": 410.0,
+      "category": "Other"
+    },
+    {
+      "date": "2024-10-17",
+      "merchant": "Competitor Restaurant",
+      "amount": 125.0,
+      "category": "Dining"
+    },
+    {
+      "date": "2024-10-12",
+      "merchant": "Square Processing Fees",
+      "amount": 485.6,
+      "category": "Other"
+    },
+    {
+      "date": "2024-10-27",
+      "merchant": "DoorDash Commission Fees",
+      "amount": 620.4,
+      "category": "Other"
+    },
+    {
+      "date": "2024-10-08",
+      "merchant": "Shell Gas",
+      "amount": 78.0,
+      "category": "Other"
+    },
+    {
+      "date": "2024-10-14",
+      "merchant": "Health Dept Permit",
+      "amount": 350.0,
+      "category": "Utilities"
+    },
+    {
+      "date": "2024-10-22",
+      "merchant": "Uber",
+      "amount": 45.2,
+      "category": "Other"
+    }
+  ]
+}

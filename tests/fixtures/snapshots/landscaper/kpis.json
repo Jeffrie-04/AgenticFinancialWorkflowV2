@@ -1,0 +1,50 @@
+{
+  "kpis": {
+    "total_spend": 48147.25,
+    "total_income": 58860.0,
+    "top_merchants": [
+      "Gusto Payroll",
+      "SiteOne Landscape Supply",
+      "Toro Dealer"
+    ],
+    "average_expense": 1504.6,
+    "net_cash_flow": 10712.75,
+    "status": "surplus",
+    "spend_by_category": {
+      "Utilities": {
+        "amount": 24609.0,
+        "pct_of_spend": 51.1
+      },
+      "Shopping": {
+        "amount": 19801.8,
+        "pct_of_spend": 41.1
+      },
+      "Other": {
+        "amount": 3348.15,
+        "pct_of_spend": 7.0
+      },
+      "Dining": {
+        "amount": 388.3,
+        "pct_of_spend": 0.8
+      }
+    },
+    "income_concentration": {
+      "top_client": "Greenfield Estate Project",
+      "top_client_pct": 21.2,
+      "top3_clients_pct": 48.6,
+      "num_income_sources": 10
+    },
+    "fixed_vs_discretionary": {
+      "fixed_spend": 24609.0,
+      "discretionary_spend": 23538.25,
+      "fixed_pct": 51.1
+    },
+    "burn_rate": {
+      "period_days": 28,
+      "daily_avg_spend": 1719.54,
+      "monthly_projection": 51586.34,
+      "unparseable_dates": 0,
+      "runway_note": "Runway not computed: requires a starting cash balance."
+    }
+  }
+}
