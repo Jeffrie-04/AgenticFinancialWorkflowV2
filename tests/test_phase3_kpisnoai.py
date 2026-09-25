@@ -19,6 +19,7 @@ expected number is unchanged.
 The join/refund tests at the bottom build ingested.json rows (the output
 of afw/ingest.py) and categorized.json rows (LLM output) directly.
 """
+import itertools
 import json
 import os
 from datetime import date
@@ -283,9 +284,14 @@ class TestValidate:
         full_kpis["spend_by_category"] = kpis_mod.compute_spend_by_category(full_fixture)
         kpis_mod.validate(full_kpis, full_fixture)  # should not raise
 
-    def test_raises_on_nonpositive_total_spend(self):
+    def test_raises_on_negative_total_spend(self):
         with pytest.raises(ValueError, match="total_spend"):
-            kpis_mod.validate({"total_spend": 0, "spend_by_category": {}}, [])
+            kpis_mod.validate({"total_spend": -1, "spend_by_category": {}}, [])
+
+    def test_zero_spend_is_valid(self):
+        kpis_mod.validate({"total_spend": 0, "spend_by_category": {}}, [])
+        kpis_mod.validate({"total_spend": 0,
+                           "spend_by_category": {"Shopping": {"amount": 0.0, "pct_of_spend": 0.0}}}, [])
 
     def test_raises_when_category_percentages_dont_sum_to_100(self):
         bad_kpis = {
@@ -327,6 +333,18 @@ def run_main(tmp_path, ingested, categorized):
 
 
 RENT = (ing("rent", "Landlord", "1000.00", "DEBIT"), cat("Landlord", 1000.0, "Utilities"))
+
+# $100 purchase, refunded $20 then $30 on later days -> $50 net spend.
+REFUND_20_30 = [
+    ing("d", "Shop", "100.00", "DEBIT", day="2024-10-01"),
+    ing("r1", "Shop", "20.00", "CREDIT", day="2024-10-02", is_refund=True, refund_of="d"),
+    ing("r2", "Shop", "30.00", "CREDIT", day="2024-10-03", is_refund=True, refund_of="d"),
+]
+REFUND_20_30_LLM = [
+    cat("Shop", 100.0, "Shopping", day="2024-10-01"),
+    cat("Shop", -20.0, "Income", day="2024-10-02"),
+    cat("Shop", -30.0, "Income", day="2024-10-03"),
+]
 
 
 class TestJoinCategories:
@@ -396,15 +414,103 @@ class TestJoinCategories:
     def test_f8_refund_of_excluded_debit_is_needs_review(self):
         rows, report = kpis_mod.join_categories(
             [ing("d", "Home Depot", "200.00", "DEBIT"),  # no categorized match -> excluded
-             ing("r", "Home Depot", "50.00", "CREDIT", is_refund=True, refund_of="d")],
-            [cat("Home Depot", -50.0, "Income")])
+             ing("r", "Home Depot", "50.00", "CREDIT", day="2024-10-05", is_refund=True, refund_of="d")],
+            [cat("Home Depot", -50.0, "Income", day="2024-10-05")])
         assert rows == []
         assert report["join_missing"] == 1
         assert report["refund_original_excluded"] == 1
         assert report["excluded_total"] == {"debit": "200.00", "credit": "50.00", "rows": 2}
 
 
+class TestJoinGroups:
+    """Rows sharing (date, normalized merchant) are judged together: if the
+    LLM lost or mis-echoed one of them, its categories for the others can't
+    be trusted either."""
+
+    def test_codex_paper_meal_group_with_missing_row_is_inconsistent(self):
+        # Same store, same day: $10 paper and $20 meal. The LLM echoed the
+        # paper row with the meal's amount and dropped the other, so a
+        # key-only join would give the $20 meal the paper's category.
+        rows, report = kpis_mod.join_categories(
+            [ing("paper", "Costco", "10.00", "DEBIT"), ing("meal", "Costco", "20.00", "DEBIT")],
+            [cat("Costco", 20.0, "Shopping")])
+        assert rows == []
+        assert report["join_missing"] == 1             # the $10 row keeps its own reason
+        assert report["join_group_inconsistent"] == 1  # the $20 row is pulled out with it
+        assert report["excluded_total"] == {"debit": "30.00", "credit": "0.00", "rows": 2}
+
+    def test_group_with_missing_row_is_inconsistent_even_when_counts_match(self):
+        # Two source rows, two LLM rows, but the LLM echoed $10 as $25: the
+        # counts reconcile, so only the missing-row rule catches it.
+        rows, report = kpis_mod.join_categories(
+            [ing("paper", "Costco", "10.00", "DEBIT"), ing("meal", "Costco", "20.00", "DEBIT")],
+            [cat("Costco", 25.0, "Shopping"), cat("Costco", 20.0, "Dining")])
+        assert rows == []
+        assert report["join_missing"] == 1
+        assert report["join_group_inconsistent"] == 1
+
+    def test_group_with_extra_llm_row_is_inconsistent(self):
+        rows, report = kpis_mod.join_categories(
+            [ing("paper", "Costco", "10.00", "DEBIT"), ing("meal", "Costco", "20.00", "DEBIT")],
+            [cat("Costco", 10.0, "Shopping"), cat("Costco", 20.0, "Dining"), cat("Costco", 30.0, "Other")])
+        assert rows == []
+        assert report["join_group_inconsistent"] == 2
+        assert report["categorized_unmatched"] == 1
+
+    def test_consistent_group_joins_normally(self):
+        rows, report = kpis_mod.join_categories(
+            [ing("paper", "Costco", "10.00", "DEBIT"), ing("meal", "Costco", "20.00", "DEBIT")],
+            [cat("Costco", 20.0, "Dining"), cat("Costco", 10.0, "Shopping")])
+        assert [(r["id"], r["category"]) for r in rows] == [("paper", "Shopping"), ("meal", "Dining")]
+        assert report["join_group_inconsistent"] == 0
+
+    def test_group_problem_does_not_spread_to_other_days_or_merchants(self):
+        rows, report = kpis_mod.join_categories(
+            [ing("a", "Costco", "10.00", "DEBIT"),
+             ing("b", "Costco", "20.00", "DEBIT", day="2024-10-04"),
+             ing("c", "Staples", "30.00", "DEBIT")],
+            [cat("Costco", 20.0, "Shopping", day="2024-10-04"), cat("Staples", 30.0, "Shopping")])
+        assert [r["id"] for r in rows] == ["b", "c"]
+        assert report["join_missing"] == 1
+        assert report["join_group_inconsistent"] == 0
+
+
 class TestRefundNetting:
+    def test_same_day_full_refund_nets_to_zero_not_ambiguous(self, tmp_path):
+        # DEBIT and refund share (date, merchant, |amount|); refunds are left
+        # out of the source-side uniqueness check, and the refund's "Income"
+        # label doesn't make the DEBIT's category ambiguous.
+        kpis, report = run_main(tmp_path, [
+            ing("d", "Shop", "100.00", "DEBIT"),
+            ing("r", "Shop", "100.00", "CREDIT", is_refund=True, refund_of="d"),
+        ], [cat("Shop", 100.0, "Shopping"), cat("Shop", -100.0, "Income")])
+        assert report["join_ambiguous"] == 0
+        assert kpis["total_spend"] == 0.0
+        assert kpis["total_income"] == 0.0
+        assert kpis["spend_by_category"] == {"Shopping": {"amount": 0.0, "pct_of_spend": 0.0}}
+
+    def test_partial_refunds_net_to_remaining_spend(self, tmp_path):
+        kpis, _ = run_main(tmp_path, REFUND_20_30, REFUND_20_30_LLM)
+        assert kpis["total_spend"] == 50.0
+        assert kpis["total_income"] == 0.0
+
+    def test_full_refund_on_a_later_day_nets_to_zero(self, tmp_path):
+        kpis, _ = run_main(tmp_path, [
+            ing("d", "Shop", "100.00", "DEBIT", day="2024-10-01"),
+            ing("r", "Shop", "100.00", "CREDIT", day="2024-10-09", is_refund=True, refund_of="d"),
+        ], [cat("Shop", 100.0, "Shopping", day="2024-10-01")])
+        assert (kpis["total_spend"], kpis["total_income"]) == (0.0, 0.0)
+
+    def test_refund_order_does_not_change_kpis(self, tmp_path):
+        results = []
+        for order in itertools.permutations(REFUND_20_30):
+            out = tmp_path / str(len(results))
+            out.mkdir()
+            results.append(run_main(out, list(order), REFUND_20_30_LLM)[0])
+        assert all(r == results[0] for r in results)
+        assert results[0]["total_spend"] == 50.0
+
+
     def test_f6_refund_nets_against_original_debit(self, tmp_path):
         kpis, _ = run_main(tmp_path, [
             RENT[0],
@@ -467,6 +573,24 @@ class TestMainEndToEnd:
         # ingest's own section of data_quality.json is preserved
         dq = json.loads((tmp_path / "data_quality.json").read_text())
         assert dq["counts"] == {"rows": 2}
+
+    def test_every_row_excluded_gives_zero_kpis_not_an_error(self, tmp_path):
+        kpis, report = run_main(tmp_path, [ing("a", "Shop", "10.00", "DEBIT")], [])
+        assert report["rows_in_kpis"] == 0
+        assert report["join_missing"] == 1
+        assert (kpis["total_spend"], kpis["total_income"], kpis["net_cash_flow"]) == (0.0, 0.0, 0.0)
+        assert kpis["spend_by_category"] == {}
+        assert kpis["top_merchants"] == []
+
+    def test_data_quality_written_even_if_kpi_validation_fails(self, tmp_path, monkeypatch):
+        def boom(kpis, transactions):
+            raise ValueError("validation failed")
+        monkeypatch.setattr(kpis_mod, "validate", boom)
+        with pytest.raises(ValueError, match="validation failed"):
+            run_main(tmp_path, [RENT[0]], [RENT[1]])
+        dq = json.loads((tmp_path / "data_quality.json").read_text())
+        assert dq["kpi_join"]["rows_in_kpis"] == 1
+        assert not (tmp_path / "kpis.json").exists()
 
     def test_main_fails_without_ingested_json(self, tmp_path):
         (tmp_path / "categorized.json").write_text(json.dumps({"categorized": [RENT[1]]}))

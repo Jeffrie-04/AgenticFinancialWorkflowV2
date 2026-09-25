@@ -35,7 +35,9 @@ FIXED_CATEGORIES = {Category.UTILITIES.value}
 DISCRETIONARY_CATEGORIES = {Category.DINING.value, Category.SHOPPING.value, Category.OTHER.value}
 
 # Reasons a source row that passed ingest is still left out of the KPIs.
-JOIN_PROBLEMS = ("join_ambiguous", "join_missing", "category_invalid", "refund_original_excluded")
+JOIN_PROBLEMS = ("join_ambiguous", "join_missing", "category_invalid",
+                 "join_group_inconsistent", "refund_original_excluded")
+CATEGORY_VALUES = {c.value for c in Category}
 
 
 def parse_date(raw):
@@ -82,21 +84,34 @@ def join_categories(ingested, categorized):
     """Attach the LLM's category to each OK source row. Returns (rows, report).
 
     A row is left out of the KPIs (NEEDS_REVIEW, counted, never silently
-    dropped) when its key appears more than once in the source, the LLM rows
-    for it disagree, no LLM row matches, or the category isn't a Category.
+    dropped) when its key appears more than once among source purchases, the
+    LLM rows for it disagree, no LLM row matches, or the category isn't a
+    Category. Rows are also judged per (date, merchant) group: if any row in
+    the group has no LLM match, or the group's LLM row count can't be
+    reconciled with its source rows, the LLM mixed rows up and every row in
+    the group is left out (join_group_inconsistent).
+
     A refund takes no category of its own — it is netted against its
-    original DEBIT — so it is left out only if that DEBIT is.
+    original DEBIT — so it needs no LLM row and is left out of the source
+    uniqueness check; it is left out of the KPIs only with its group or its
+    original DEBIT.
     """
     # TODO(phase 2): categorizer returns {id, category} only; replace this key
     # join with an id lookup.
     report = Counter()
-    by_key = defaultdict(list)
+    llm_rows = defaultdict(list)
+    seen = set()
     for c in categorized:
         key = _categorized_key(c)
         if key is None:
             report["categorized_invalid"] += 1
-        else:
-            by_key[key].append(c)
+            continue
+        if (key, str(c.get("category"))) in seen:
+            # Exact repeat (same key and category): an echo glitch, counted once.
+            report["categorized_duplicate"] += 1
+            continue
+        seen.add((key, str(c.get("category"))))
+        llm_rows[key].append(c)
 
     usable = []
     for t in ingested:
@@ -104,8 +119,44 @@ def join_categories(ingested, categorized):
             continue
         row = {**t, "date": date.fromisoformat(t["date"])}
         usable.append((row, (row["date"], normalize_merchant(row["merchant"]), Decimal(row["amount"]))))
-    source_keys = Counter(key for _, key in usable)
-    report["categorized_unmatched"] = sum(len(v) for k, v in by_key.items() if k not in source_keys)
+    purchase_keys = Counter(key for row, key in usable if not row["is_refund"])
+    refund_keys = {key for row, key in usable if row["is_refund"]}
+    source_keys = set(purchase_keys) | refund_keys
+    report["categorized_unmatched"] = sum(len(v) for k, v in llm_rows.items() if k not in source_keys)
+
+    # Per-row verdicts.
+    candidates = []  # (row, key, reason or None)
+    for row, key in usable:
+        if row["status"] != Status.OK.value:
+            continue  # ingest already marked it NEEDS_REVIEW and counted it
+        if row["is_refund"]:
+            candidates.append((row, key, None))
+            continue
+        matches = llm_rows.get(key, [])
+        categories = {str(m.get("category")) for m in matches}
+        if key in refund_keys and len(categories) > 1:
+            categories.discard(Category.INCOME.value)  # that's the refund's own LLM row
+        if purchase_keys[key] > 1 or len(categories) > 1:
+            reason = "join_ambiguous"
+        elif not matches:
+            reason = "join_missing"
+        elif next(iter(categories)) not in CATEGORY_VALUES:
+            reason = "category_invalid"
+        else:
+            reason = None
+            row = {**row, "category": next(iter(categories))}
+        candidates.append((row, key, reason))
+
+    # Per-group verdicts. A group's LLM rows must cover every source purchase
+    # (ingest NEEDS_REVIEW rows included — the LLM saw them too), plus at most
+    # one row per refund.
+    group = lambda key: key[:2]
+    purchases_in = Counter(group(k) for row, k in usable if not row["is_refund"])
+    refunds_in = Counter(group(k) for row, k in usable if row["is_refund"])
+    llm_in = Counter(group(k) for k, rows in llm_rows.items() for _ in rows)
+    bad_groups = {group(k) for _, k, reason in candidates if reason == "join_missing"}
+    bad_groups |= {g for g in set(purchases_in) | set(refunds_in)
+                   if not purchases_in[g] <= llm_in[g] <= purchases_in[g] + refunds_in[g]}
 
     excluded = []
 
@@ -114,23 +165,13 @@ def join_categories(ingested, categorized):
         report[reason] += 1
 
     joined = []
-    for row, key in usable:
-        if row["status"] != Status.OK.value:
-            continue  # ingest already marked it NEEDS_REVIEW and counted it
-        if row["is_refund"]:
-            joined.append(row)
-            continue
-        matches = by_key.get(key, [])
-        categories = {str(m.get("category")) for m in matches}
-        if source_keys[key] > 1 or len(categories) > 1:
-            exclude(row, "join_ambiguous")
-        elif not matches:
-            exclude(row, "join_missing")
-        elif categories.pop() not in {c.value for c in Category}:
-            exclude(row, "category_invalid")
+    for row, key, reason in candidates:
+        if reason:
+            exclude(row, reason)
+        elif group(key) in bad_groups:
+            exclude(row, "join_group_inconsistent")
         else:
-            report["categorized_duplicate"] += len(matches) - 1
-            joined.append({**row, "category": matches[0]["category"]})
+            joined.append(row)
 
     kept_debits = {r["id"] for r in joined if not r["is_refund"]}
     rows = []
@@ -310,12 +351,13 @@ def compute_burn_rate(transactions):
 
 
 def validate(kpis, transactions):
-    """Cheap sanity checks so a broken computation fails loudly."""
-    if kpis["total_spend"] <= 0:
-        raise ValueError(f"total_spend <= 0 (got {kpis['total_spend']})")
+    """Cheap sanity checks so a broken computation fails loudly. Zero spend
+    is valid (every row refunded or left out at the join)."""
+    if kpis["total_spend"] < 0:
+        raise ValueError(f"total_spend < 0 (got {kpis['total_spend']})")
     # category percentages should sum to ~100 (rounding tolerance)
     pct_sum = sum(v["pct_of_spend"] for v in kpis["spend_by_category"].values())
-    if abs(pct_sum - 100) > 1.0:
+    if kpis["total_spend"] > 0 and abs(pct_sum - 100) > 1.0:
         raise ValueError(f"category pct sum off: {pct_sum}")
 
 
@@ -335,6 +377,8 @@ def main(outputs_dir="outputs"):
     ingested = load_ingested(os.path.join(outputs_dir, "ingested.json"))
     categorized = load_transactions(os.path.join(outputs_dir, "categorized.json"))
     transactions, join_report = join_categories(ingested, categorized)
+    # Written first, so the record of what was left out survives a KPI failure.
+    record_join_report(outputs_dir, join_report)
     transactions = apply_refunds(transactions)
 
     kpis = {}
@@ -350,7 +394,6 @@ def main(outputs_dir="outputs"):
     kpis_path = os.path.join(outputs_dir, "kpis.json")
     with open(kpis_path, "w") as f:
         json.dump({"kpis": kpis}, f, indent=2)
-    record_join_report(outputs_dir, join_report)
     left_out = join_report["excluded_total"]["rows"]
     print(f"KPIs saved to {kpis_path} ({join_report['rows_in_kpis']} rows used, "
           f"{left_out} left out at join -> data_quality.json)")
