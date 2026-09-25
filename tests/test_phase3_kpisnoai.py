@@ -346,6 +346,11 @@ class TestExactMath:
         assert netted[0]["amount"] == 0  # exactly, not 1e-16 off
         assert kpis_mod.compute_core_kpis(netted)["total_spend"] == 0.0
 
+    def test_rounding_is_half_up(self):
+        # average of $0.02 and $0.03 is exactly $0.025: half-up -> 0.03, half-even -> 0.02
+        transactions = [row("A", "0.02", "DEBIT"), row("B", "0.03", "DEBIT")]
+        assert kpis_mod.compute_core_kpis(transactions)["average_expense"] == 0.03
+
     def test_kpi_output_is_plain_numbers(self, tmp_path):
         kpis, _ = run_main(tmp_path, [RENT[0], ing("c", "Client", "0.10", "CREDIT")],
                            [RENT[1], cat("Client", -0.1, "Income")])

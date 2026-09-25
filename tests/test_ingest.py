@@ -249,6 +249,13 @@ def test_row_field_count_mismatch_rejected():
     assert rows[4].status == OK
 
 
+def test_unterminated_quote_fails_file_with_line_number():
+    # Non-strict csv swallows the next row into the quoted description and
+    # yields one OK row; strict parsing must fail the file instead.
+    with pytest.raises(ingest.IngestFailed, match=r"unterminated_quote\.csv: malformed CSV at line 3"):
+        ingest.ingest_rows(fixture("unterminated_quote.csv"), SourceConfig())
+
+
 def test_duplicate_header_fails_file():
     with pytest.raises(ingest.IngestFailed, match="duplicate columns"):
         ingest.ingest_rows(fixture("dup_header.csv"), SourceConfig())

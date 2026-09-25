@@ -99,14 +99,24 @@ def read_rows(path):
             raise IngestFailed(f"{os.path.basename(path)}: not UTF-8 or cp1252 ({e})")
         warnings.append("encoding_fallback_cp1252")
 
-    reader = csv.reader(io.StringIO(text, newline=""))
+    # strict: a malformed file (e.g. an unterminated quote, which would
+    # otherwise swallow the following rows into one field) fails outright.
+    reader = csv.reader(io.StringIO(text, newline=""), strict=True)
+    try:
+        return _read_records(reader, os.path.basename(path)), warnings
+    except csv.Error as e:
+        raise IngestFailed(
+            f"{os.path.basename(path)}: malformed CSV at line {reader.line_num}: {e}") from e
+
+
+def _read_records(reader, source_file):
     header = [h.strip().lower() for h in next(reader, [])]
     duplicates = sorted(h for h, n in Counter(header).items() if n > 1)
     if duplicates:
-        raise IngestFailed(f"{os.path.basename(path)}: duplicate columns {duplicates}")
+        raise IngestFailed(f"{source_file}: duplicate columns {duplicates}")
     missing = REQUIRED_COLUMNS - set(header)
     if missing:
-        raise IngestFailed(f"{os.path.basename(path)}: missing columns {sorted(missing)}")
+        raise IngestFailed(f"{source_file}: missing columns {sorted(missing)}")
 
     rows = []
     for values in reader:
@@ -114,7 +124,7 @@ def read_rows(path):
             continue
         mapped = dict(zip(header, values)) if len(values) == len(header) else None
         rows.append((reader.line_num, mapped))
-    return rows, warnings
+    return rows
 
 
 def parse_amount(raw, cfg):
