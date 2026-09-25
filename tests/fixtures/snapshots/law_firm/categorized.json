@@ -1,213 +1,143 @@
 {
   "categorized": [
     {
-      "date": "10-02-2024",
-      "merchant": "Henderson Corp Retainer",
-      "amount": -18500.0,
+      "id": "5886da9128407b8c-0",
       "category": "Income"
     },
     {
-      "date": "10-08-2024",
-      "merchant": "Mercer Estate Settlement",
-      "amount": -42000.0,
+      "id": "f28288d412bc8f14-0",
       "category": "Income"
     },
     {
-      "date": "10-15-2024",
-      "merchant": "Blackwell Holdings Retainer",
-      "amount": -12000.0,
+      "id": "3b805c584eca6735-0",
       "category": "Income"
     },
     {
-      "date": "10-22-2024",
-      "merchant": "Thompson v. Reyes Fee",
-      "amount": -8750.0,
+      "id": "32574e4b41fcdddc-0",
       "category": "Income"
     },
     {
-      "date": "10-28-2024",
-      "merchant": "Consultation Fees",
-      "amount": -2400.0,
+      "id": "5e5ea37d8c598e42-0",
       "category": "Income"
     },
     {
-      "date": "10-01-2024",
-      "merchant": "ADP Payroll",
-      "amount": 28500.0,
+      "id": "ebe36fb7893ee7b9-0",
       "category": "Utilities"
     },
     {
-      "date": "10-15-2024",
-      "merchant": "ADP Payroll",
-      "amount": 28500.0,
+      "id": "c52f6b0d84b61fdb-0",
       "category": "Utilities"
     },
     {
-      "date": "10-05-2024",
-      "merchant": "Contract Attorney Payment",
-      "amount": 4200.0,
+      "id": "99898ab4ddfb5e1a-0",
       "category": "Utilities"
     },
     {
-      "date": "10-01-2024",
-      "merchant": "Regus Office Space",
-      "amount": 6800.0,
+      "id": "7c549bdcc4298f39-0",
       "category": "Utilities"
     },
     {
-      "date": "10-03-2024",
-      "merchant": "Hiscox Insurance",
-      "amount": 1850.0,
+      "id": "561fd8192860b130-0",
       "category": "Utilities"
     },
     {
-      "date": "10-03-2024",
-      "merchant": "Business Liability Insurance",
-      "amount": 620.0,
+      "id": "6ee8a4d9d3f3c09b-0",
       "category": "Utilities"
     },
     {
-      "date": "10-04-2024",
-      "merchant": "Westlaw Subscription",
-      "amount": 1400.0,
+      "id": "1c0c0f72c7206a96-0",
       "category": "Utilities"
     },
     {
-      "date": "10-04-2024",
-      "merchant": "LexisNexis",
-      "amount": 890.0,
+      "id": "7a7ff53c626c1ef7-0",
       "category": "Utilities"
     },
     {
-      "date": "10-10-2024",
-      "merchant": "Clio Legal Software",
-      "amount": 249.0,
+      "id": "572971b4c587405f-0",
       "category": "Utilities"
     },
     {
-      "date": "10-12-2024",
-      "merchant": "Microsoft 365",
-      "amount": 180.0,
+      "id": "98dfe71e40e35ab6-0",
       "category": "Utilities"
     },
     {
-      "date": "10-06-2024",
-      "merchant": "Adobe Acrobat Pro",
-      "amount": 99.99,
+      "id": "670cf2471a765c2a-0",
       "category": "Utilities"
     },
     {
-      "date": "10-18-2024",
-      "merchant": "DocuSign",
-      "amount": 65.0,
+      "id": "1e062a9e8bbf4446-0",
       "category": "Utilities"
     },
     {
-      "date": "10-20-2024",
-      "merchant": "Zoom",
-      "amount": 44.99,
+      "id": "8a357adb8a1617cc-0",
       "category": "Utilities"
     },
     {
-      "date": "10-14-2024",
-      "merchant": "Certified Court Reporting",
-      "amount": 1250.0,
+      "id": "740bf2d28738ad46-0",
       "category": "Utilities"
     },
     {
-      "date": "10-16-2024",
-      "merchant": "Expert Witness Retainer",
-      "amount": 3500.0,
+      "id": "0f8337fc3966e2c7-0",
       "category": "Utilities"
     },
     {
-      "date": "10-09-2024",
-      "merchant": "Process Server LLC",
-      "amount": 380.0,
+      "id": "b1362540ecd72933-0",
       "category": "Utilities"
     },
     {
-      "date": "10-07-2024",
-      "merchant": "Verizon Business",
-      "amount": 240.0,
+      "id": "35f6bfc2bd1efc9d-0",
       "category": "Utilities"
     },
     {
-      "date": "10-11-2024",
-      "merchant": "ConEd Electric",
-      "amount": 310.0,
+      "id": "4cf9371696fedcb8-0",
       "category": "Utilities"
     },
     {
-      "date": "10-05-2024",
-      "merchant": "Staples",
-      "amount": 340.5,
+      "id": "fef6217e97e9b19b-0",
       "category": "Shopping"
     },
     {
-      "date": "10-17-2024",
-      "merchant": "Best Buy",
-      "amount": 1899.0,
+      "id": "495d9e724f752b40-0",
       "category": "Shopping"
     },
     {
-      "date": "10-23-2024",
-      "merchant": "Amazon Business",
-      "amount": 275.8,
+      "id": "81ca3c33522e484e-0",
       "category": "Shopping"
     },
     {
-      "date": "10-13-2024",
-      "merchant": "Office Depot",
-      "amount": 156.25,
+      "id": "6ec45f8ae8b97848-0",
       "category": "Shopping"
     },
     {
-      "date": "10-09-2024",
-      "merchant": "The Capital Grille",
-      "amount": 285.0,
+      "id": "c04f572d3b4d341f-0",
       "category": "Dining"
     },
     {
-      "date": "10-16-2024",
-      "merchant": "Panera Bread",
-      "amount": 78.4,
+      "id": "48dd7afe169ca9d2-0",
       "category": "Dining"
     },
     {
-      "date": "10-24-2024",
-      "merchant": "Starbucks",
-      "amount": 42.15,
+      "id": "aeb711f9eae43515-0",
       "category": "Dining"
     },
     {
-      "date": "10-08-2024",
-      "merchant": "County Clerk Filing Fee",
-      "amount": 435.0,
+      "id": "8376fd5f0fc3c4f6-0",
       "category": "Utilities"
     },
     {
-      "date": "10-19-2024",
-      "merchant": "Uber",
-      "amount": 68.5,
+      "id": "2ec88b3ffe19e2a6-0",
       "category": "Other"
     },
     {
-      "date": "10-21-2024",
-      "merchant": "FedEx",
-      "amount": 92.3,
+      "id": "719d824983fc9ddf-0",
       "category": "Other"
     },
     {
-      "date": "10-25-2024",
-      "merchant": "LegalZoom Filing",
-      "amount": 199.0,
+      "id": "7d41a245ae44e1bb-0",
       "category": "Utilities"
     },
     {
-      "date": "10-26-2024",
-      "merchant": "Parking Garage",
-      "amount": 180.0,
+      "id": "b6cb394c69b15fb5-0",
       "category": "Other"
     }
   ]

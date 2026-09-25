@@ -18,7 +18,7 @@ PHASES = [
     ("Phase 3 - Reflection", phase3_reflection),
 ]
 
-NEEDS_CSV = {ingest, phase2_plan, phase3_categorized}
+NEEDS_CSV = {ingest}  # every later phase reads validated rows from outputs/ingested.json
 
 
 def main(business_dir=None):

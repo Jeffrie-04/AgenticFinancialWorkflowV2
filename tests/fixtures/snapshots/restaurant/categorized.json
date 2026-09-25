@@ -1,286 +1,192 @@
 {
   "categorized": [
     {
-      "date": "2024-10-03",
-      "merchant": "Card Batch Deposit",
-      "amount": -4820.5,
+      "id": "494c095e66a2de8b-0",
       "category": "Income"
     },
     {
-      "date": "2024-10-07",
-      "merchant": "Card Batch Deposit",
-      "amount": -5340.75,
+      "id": "25dcb99ef9a80d00-0",
       "category": "Income"
     },
     {
-      "date": "2024-10-10",
-      "merchant": "DoorDash Payout",
-      "amount": -2180.4,
+      "id": "f03e5f3b9de6209b-0",
       "category": "Income"
     },
     {
-      "date": "2024-10-14",
-      "merchant": "Card Batch Deposit",
-      "amount": -6120.0,
+      "id": "216ac9370944439b-0",
       "category": "Income"
     },
     {
-      "date": "2024-10-14",
-      "merchant": "Uber Eats Payout",
-      "amount": -1890.25,
+      "id": "d9eed6c2b9b344ae-0",
       "category": "Income"
     },
     {
-      "date": "2024-10-17",
-      "merchant": "Card Batch Deposit",
-      "amount": -5680.3,
+      "id": "d3394d2582dd45d1-0",
       "category": "Income"
     },
     {
-      "date": "2024-10-21",
-      "merchant": "Card Batch Deposit",
-      "amount": -6890.6,
+      "id": "ad587fbf86735ab3-0",
       "category": "Income"
     },
     {
-      "date": "2024-10-21",
-      "merchant": "DoorDash Payout",
-      "amount": -2410.8,
+      "id": "e0e885a669175458-0",
       "category": "Income"
     },
     {
-      "date": "2024-10-24",
-      "merchant": "Private Event Deposit",
-      "amount": -3200.0,
+      "id": "a923880b4d7c2a95-0",
       "category": "Income"
     },
     {
-      "date": "2024-10-28",
-      "merchant": "Card Batch Deposit",
-      "amount": -6450.9,
+      "id": "a970afeff34545fd-0",
       "category": "Income"
     },
     {
-      "date": "2024-10-28",
-      "merchant": "Uber Eats Payout",
-      "amount": -1750.45,
+      "id": "0d2a09e3e4c8809e-0",
       "category": "Income"
     },
     {
-      "date": "2024-10-31",
-      "merchant": "Card Batch Deposit",
-      "amount": -7240.0,
-      "category": "Income"
-    },
-    {
-      "date": "2024-10-25",
-      "merchant": "Card Batch Deposit",
-      "amount": -5980.5,
-      "category": "Income"
-    },
-    {
-      "date": "2024-10-01",
-      "merchant": "Sysco Foods",
-      "amount": 4280.6,
+      "id": "b7d84e793e9a862a-0",
       "category": "Shopping"
     },
     {
-      "date": "2024-10-08",
-      "merchant": "Sysco Foods",
-      "amount": 3950.25,
+      "id": "f5e608da800f1a96-0",
       "category": "Shopping"
     },
     {
-      "date": "2024-10-15",
-      "merchant": "Sysco Foods",
-      "amount": 4510.8,
+      "id": "c47b06ca8cd65d11-0",
       "category": "Shopping"
     },
     {
-      "date": "2024-10-22",
-      "merchant": "Sysco Foods",
-      "amount": 4180.4,
+      "id": "0c0a1ccb962fc250-0",
       "category": "Shopping"
     },
     {
-      "date": "2024-10-04",
-      "merchant": "US Foods",
-      "amount": 2340.15,
+      "id": "e8dc2ba58296b80f-0",
       "category": "Shopping"
     },
     {
-      "date": "2024-10-18",
-      "merchant": "US Foods",
-      "amount": 2610.9,
+      "id": "7c4a824f495cdf76-0",
       "category": "Shopping"
     },
     {
-      "date": "2024-10-02",
-      "merchant": "Restaurant Depot",
-      "amount": 1875.5,
+      "id": "d7f6b57d34fed81a-0",
       "category": "Shopping"
     },
     {
-      "date": "2024-10-16",
-      "merchant": "Restaurant Depot",
-      "amount": 1640.3,
+      "id": "2227b47fd72f0d3e-0",
       "category": "Shopping"
     },
     {
-      "date": "2024-10-25",
-      "merchant": "Restaurant Depot",
-      "amount": 560.75,
+      "id": "ee04ee1a2bf303e0-0",
       "category": "Shopping"
     },
     {
-      "date": "2024-10-05",
-      "merchant": "Local Seafood Co",
-      "amount": 980.0,
+      "id": "5435fbda949e399a-0",
       "category": "Shopping"
     },
     {
-      "date": "2024-10-12",
-      "merchant": "Local Seafood Co",
-      "amount": 1120.0,
+      "id": "441dd5cbe0a3436c-0",
       "category": "Shopping"
     },
     {
-      "date": "2024-10-09",
-      "merchant": "Craft Beverage Distributor",
-      "amount": 1450.75,
+      "id": "9170eec618d4bcfd-0",
       "category": "Shopping"
     },
     {
-      "date": "2024-10-23",
-      "merchant": "Craft Beverage Distributor",
-      "amount": 1680.2,
-      "category": "Shopping"
-    },
-    {
-      "date": "2024-10-19",
-      "merchant": "WebstaurantStore",
-      "amount": 890.4,
-      "category": "Shopping"
-    },
-    {
-      "date": "2024-10-26",
-      "merchant": "Home Depot",
-      "amount": 245.3,
-      "category": "Shopping"
-    },
-    {
-      "date": "2024-10-04",
-      "merchant": "Gusto Payroll",
-      "amount": 8940.0,
+      "id": "2c98f0aebf148017-0",
       "category": "Utilities"
     },
     {
-      "date": "2024-10-18",
-      "merchant": "Gusto Payroll",
-      "amount": 9210.0,
+      "id": "efe54f25675ed74f-0",
       "category": "Utilities"
     },
     {
-      "date": "2024-10-01",
-      "merchant": "Property Management LLC",
-      "amount": 5500.0,
+      "id": "e7f491f0057b124c-0",
       "category": "Utilities"
     },
     {
-      "date": "2024-10-06",
-      "merchant": "National Grid Gas",
-      "amount": 680.0,
+      "id": "3da5a7d1397f939a-0",
       "category": "Utilities"
     },
     {
-      "date": "2024-10-06",
-      "merchant": "ConEd Electric",
-      "amount": 920.0,
+      "id": "e1018e6be3085f05-0",
       "category": "Utilities"
     },
     {
-      "date": "2024-10-11",
-      "merchant": "Water & Sewer",
-      "amount": 245.0,
+      "id": "11f4a2938773bd61-0",
       "category": "Utilities"
     },
     {
-      "date": "2024-10-13",
-      "merchant": "Verizon",
-      "amount": 180.0,
+      "id": "29bc07974ff0cad0-0",
       "category": "Utilities"
     },
     {
-      "date": "2024-10-07",
-      "merchant": "Ecolab",
-      "amount": 320.0,
+      "id": "824639743e288bf1-0",
       "category": "Utilities"
     },
     {
-      "date": "2024-10-10",
-      "merchant": "Toast POS",
-      "amount": 165.0,
-      "category": "Utilities"
-    },
-    {
-      "date": "2024-10-10",
-      "merchant": "OpenTable",
-      "amount": 249.0,
-      "category": "Utilities"
-    },
-    {
-      "date": "2024-10-15",
-      "merchant": "QuickBooks Online",
-      "amount": 80.0,
-      "category": "Utilities"
-    },
-    {
-      "date": "2024-10-03",
-      "merchant": "Restaurant Insurance Co",
-      "amount": 1240.0,
-      "category": "Utilities"
-    },
-    {
-      "date": "2024-10-20",
-      "merchant": "Waste Management",
-      "amount": 410.0,
+      "id": "f7e798cbcc46b061-0",
       "category": "Other"
     },
     {
-      "date": "2024-10-17",
-      "merchant": "Competitor Restaurant",
-      "amount": 125.0,
+      "id": "cfb4f5ed2faaf449-0",
+      "category": "Utilities"
+    },
+    {
+      "id": "c9012d42856a604f-0",
+      "category": "Utilities"
+    },
+    {
+      "id": "45cfa9e546915754-0",
+      "category": "Utilities"
+    },
+    {
+      "id": "2506643912b769c4-0",
+      "category": "Utilities"
+    },
+    {
+      "id": "211ccb80e0ec7001-0",
+      "category": "Shopping"
+    },
+    {
+      "id": "3a2c89a7c72c3561-0",
+      "category": "Shopping"
+    },
+    {
+      "id": "b78c1480c16e6ef5-0",
+      "category": "Shopping"
+    },
+    {
+      "id": "bdf2f25db38d7f9b-0",
       "category": "Dining"
     },
     {
-      "date": "2024-10-12",
-      "merchant": "Square Processing Fees",
-      "amount": 485.6,
+      "id": "37ae592481495bff-0",
       "category": "Other"
     },
     {
-      "date": "2024-10-27",
-      "merchant": "DoorDash Commission Fees",
-      "amount": 620.4,
+      "id": "e02f92c6a1d584b7-0",
       "category": "Other"
     },
     {
-      "date": "2024-10-08",
-      "merchant": "Shell Gas",
-      "amount": 78.0,
+      "id": "4473fe2c729015ec-0",
       "category": "Other"
     },
     {
-      "date": "2024-10-14",
-      "merchant": "Health Dept Permit",
-      "amount": 350.0,
+      "id": "d9695953dcd1842f-0",
       "category": "Utilities"
     },
     {
-      "date": "2024-10-22",
-      "merchant": "Uber",
-      "amount": 45.2,
+      "id": "04013cc89330c136-0",
       "category": "Other"
+    },
+    {
+      "id": "d62c3fca40ef93f6-0",
+      "category": "Income"
+    },
+    {
+      "id": "d1a7de4bf7f003b1-0",
+      "category": "Income"
     }
   ]
 }
