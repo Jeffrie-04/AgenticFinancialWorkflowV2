@@ -21,7 +21,7 @@ import json
 import os
 from collections import Counter, defaultdict
 from datetime import date, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from afw.models import Category, Direction, Status, normalize_merchant
 
@@ -38,6 +38,12 @@ DISCRETIONARY_CATEGORIES = {Category.DINING.value, Category.SHOPPING.value, Cate
 JOIN_PROBLEMS = ("join_ambiguous", "join_missing", "category_invalid",
                  "join_group_inconsistent", "refund_original_excluded")
 CATEGORY_VALUES = {c.value for c in Category}
+
+# KPI money math is exact Decimal; values are rounded half-up only when
+# written out, and kpis.json keeps plain JSON numbers.
+ZERO = Decimal(0)
+CENT = Decimal("0.01")
+TENTH = Decimal("0.1")
 
 
 def parse_date(raw):
@@ -197,16 +203,42 @@ def join_categories(ingested, categorized):
     }
 
 
+def to_decimal(amount):
+    """Exact value of an amount: ingested.json strings as-is, and numbers via
+    their shortest repr (420.5 -> Decimal("420.5"), not the binary float)."""
+    return amount if isinstance(amount, Decimal) else Decimal(str(amount))
+
+
+def total(transactions):
+    return sum((to_decimal(t["amount"]) for t in transactions), ZERO)
+
+
+def money(value):
+    """Exact Decimal -> the float written to kpis.json, rounded half-up to cents."""
+    return float(value.quantize(CENT, ROUND_HALF_UP))
+
+
+def pct(part, whole):
+    """part / whole as a percentage, rounded half-up to 0.1; 0.0 when whole is 0."""
+    return float((part / whole * 100).quantize(TENTH, ROUND_HALF_UP)) if whole else 0.0
+
+
+def ranked(amounts):
+    """(name, amount) pairs, largest first; ties broken by name so the result
+    doesn't depend on row order."""
+    return sorted(amounts.items(), key=lambda x: (-x[1], x[0]))
+
+
 def apply_refunds(transactions):
     """Net each refund against the DEBIT it refunds, so a returned purchase
     lowers that DEBIT's spend (same category, same merchant) instead of
     counting as income. Refund rows stay in the list; split_income_expense
     skips them."""
-    refunded = defaultdict(float)
+    refunded = defaultdict(lambda: ZERO)
     for t in transactions:
         if t.get("is_refund"):
-            refunded[t["refund_of"]] += float(t["amount"])
-    return [{**t, "amount": float(t["amount"]) - refunded[t["id"]]} if t.get("id") in refunded else t
+            refunded[t["refund_of"]] += to_decimal(t["amount"])
+    return [{**t, "amount": to_decimal(t["amount"]) - refunded[t["id"]]} if t.get("id") in refunded else t
             for t in transactions]
 
 
@@ -225,39 +257,35 @@ def compute_core_kpis(transactions):
     """The original four KPIs, preserved."""
     income, expense = split_income_expense(transactions)
 
-    # total_spend = sum of all positive amounts
-    total_spend = sum(float(t["amount"]) for t in expense)
-    # total_income = sum of the absolute value of negative amounts
-    total_income = sum(abs(float(t["amount"])) for t in income)
+    total_spend = total(expense)
+    total_income = total(income)
 
     # top_merchants = 3 merchants with the highest total spend
-    merchant_spend = defaultdict(float)
+    merchant_spend = defaultdict(lambda: ZERO)
     for t in expense:
-        merchant_spend[t["merchant"]] += float(t["amount"])
-    top_merchants = [m for m, _ in sorted(
-        merchant_spend.items(), key=lambda x: x[1], reverse=True)[:3]]
+        merchant_spend[t["merchant"]] += to_decimal(t["amount"])
+    top_merchants = [m for m, _ in ranked(merchant_spend)[:3]]
 
     # average_expense = total_spend / number of expense transactions
-    average_expense = total_spend / len(expense) if expense else 0.0
+    average_expense = total_spend / len(expense) if expense else ZERO
 
     return {
-        "total_spend": round(total_spend, 2),
-        "total_income": round(total_income, 2),
+        "total_spend": money(total_spend),
+        "total_income": money(total_income),
         "top_merchants": top_merchants,
-        "average_expense": round(average_expense, 2),
+        "average_expense": money(average_expense),
     }
 
 
 def compute_net_cash_flow(transactions):
     """net_cash_flow = total_income - total_spend.
     The single most important 'am I okay' number: did more money come in than
-    went out this period. Positive = surplus, negative = burning cash."""
+    went out this period. Positive = surplus, negative = burning cash.
+    Status is decided on the exact result, before rounding."""
     income, expense = split_income_expense(transactions)
-    total_income = sum(abs(float(t["amount"])) for t in income)
-    total_spend = sum(float(t["amount"]) for t in expense)
-    net = total_income - total_spend
+    net = total(income) - total(expense)
     return {
-        "net_cash_flow": round(net, 2),
+        "net_cash_flow": money(net),
         "status": "surplus" if net >= 0 else "deficit",
     }
 
@@ -267,17 +295,14 @@ def compute_spend_by_category(transactions):
     pct = (category_spend / total_spend) * 100.
     This is where an owner finds costs to cut."""
     _, expense = split_income_expense(transactions)
-    total_spend = sum(float(t["amount"]) for t in expense)
+    total_spend = total(expense)
 
-    cat_spend = defaultdict(float)
+    cat_spend = defaultdict(lambda: ZERO)
     for t in expense:
-        cat_spend[t["category"]] += float(t["amount"])
+        cat_spend[t["category"]] += to_decimal(t["amount"])
 
-    breakdown = {}
-    for cat, amt in sorted(cat_spend.items(), key=lambda x: x[1], reverse=True):
-        pct = (amt / total_spend * 100) if total_spend else 0.0
-        breakdown[cat] = {"amount": round(amt, 2), "pct_of_spend": round(pct, 1)}
-    return breakdown
+    return {cat: {"amount": money(amt), "pct_of_spend": pct(amt, total_spend)}
+            for cat, amt in ranked(cat_spend)}
 
 
 def compute_income_concentration(transactions):
@@ -285,21 +310,18 @@ def compute_income_concentration(transactions):
     top_client_pct = (largest single income source / total_income) * 100.
     A high value = revenue risk if that client leaves."""
     income, _ = split_income_expense(transactions)
-    total_income = sum(abs(float(t["amount"])) for t in income)
+    total_income = total(income)
 
-    src_income = defaultdict(float)
+    src_income = defaultdict(lambda: ZERO)
     for t in income:
-        src_income[t["merchant"]] += abs(float(t["amount"]))
+        src_income[t["merchant"]] += to_decimal(t["amount"])
 
-    ranked = sorted(src_income.items(), key=lambda x: x[1], reverse=True)
-    top_client_pct = (ranked[0][1] / total_income * 100) if total_income and ranked else 0.0
-    top3_pct = (sum(v for _, v in ranked[:3]) / total_income * 100) if total_income else 0.0
-
+    sources = ranked(src_income)
     return {
-        "top_client": ranked[0][0] if ranked else None,
-        "top_client_pct": round(top_client_pct, 1),
-        "top3_clients_pct": round(top3_pct, 1),
-        "num_income_sources": len(ranked),
+        "top_client": sources[0][0] if sources else None,
+        "top_client_pct": pct(sources[0][1], total_income) if sources else 0.0,
+        "top3_clients_pct": pct(sum((v for _, v in sources[:3]), ZERO), total_income),
+        "num_income_sources": len(sources),
     }
 
 
@@ -309,15 +331,13 @@ def compute_fixed_vs_discretionary(transactions):
     Tells an owner how much of their outflow is locked in regardless of
     revenue. (Category-based heuristic — see FIXED_CATEGORIES note above.)"""
     _, expense = split_income_expense(transactions)
-    total_spend = sum(float(t["amount"]) for t in expense)
-
-    fixed = sum(float(t["amount"]) for t in expense if t["category"] in FIXED_CATEGORIES)
-    discretionary = total_spend - fixed
+    total_spend = total(expense)
+    fixed = total(t for t in expense if t["category"] in FIXED_CATEGORIES)
 
     return {
-        "fixed_spend": round(fixed, 2),
-        "discretionary_spend": round(discretionary, 2),
-        "fixed_pct": round((fixed / total_spend * 100) if total_spend else 0.0, 1),
+        "fixed_spend": money(fixed),
+        "discretionary_spend": money(total_spend - fixed),
+        "fixed_pct": pct(fixed, total_spend),
     }
 
 
@@ -329,7 +349,7 @@ def compute_burn_rate(transactions):
     needs a starting cash balance, which a transaction list doesn't contain.
     We report the burn rate and are honest that runway needs more data."""
     _, expense = split_income_expense(transactions)
-    total_spend = sum(float(t["amount"]) for t in expense)
+    total_spend = total(expense)
 
     dates = [parse_date(t["date"]) for t in transactions]
     valid = [d for d in dates if d is not None]
@@ -343,8 +363,8 @@ def compute_burn_rate(transactions):
     daily_avg = total_spend / days
     return {
         "period_days": days,
-        "daily_avg_spend": round(daily_avg, 2),
-        "monthly_projection": round(daily_avg * 30, 2),
+        "daily_avg_spend": money(daily_avg),
+        "monthly_projection": money(daily_avg * 30),
         "unparseable_dates": bad_rows,  # data-quality flag
         "runway_note": "Runway not computed: requires a starting cash balance.",
     }

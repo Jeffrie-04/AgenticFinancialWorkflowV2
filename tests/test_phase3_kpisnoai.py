@@ -304,6 +304,68 @@ class TestValidate:
             kpis_mod.validate(bad_kpis, [])
 
 
+# ============================================ exact math, deterministic ranks
+
+def row(merchant, amount, direction, **extra):
+    return {"merchant": merchant, "amount": amount, "direction": direction, **extra}
+
+
+def numeric_leaves(value):
+    if isinstance(value, dict):
+        for v in value.values():
+            yield from numeric_leaves(v)
+    elif isinstance(value, list):
+        for v in value:
+            yield from numeric_leaves(v)
+    elif not isinstance(value, (str, bool)) and value is not None:
+        yield value
+
+
+class TestExactMath:
+    @pytest.mark.parametrize("transactions", [
+        # 0.10 + 0.20 in, 0.30 out
+        [row("A", "0.10", "CREDIT"), row("B", "0.20", "CREDIT"), row("C", "0.30", "DEBIT")],
+        # 0.30 in, 0.10 + 0.20 out: float gives net -5.5e-17 -> "deficit"
+        [row("A", "0.30", "CREDIT"), row("B", "0.10", "DEBIT"), row("C", "0.20", "DEBIT")],
+        # Same with float amounts (legacy rows): must convert via repr, since
+        # Decimal(0.3) - Decimal(0.1) - Decimal(0.2) is -2.8e-17.
+        [row("A", 0.1, "CREDIT"), row("B", 0.2, "CREDIT"), row("C", 0.3, "DEBIT")],
+        [row("A", 0.3, "CREDIT"), row("B", 0.1, "DEBIT"), row("C", 0.2, "DEBIT")],
+    ])
+    def test_status_decided_from_exact_net(self, transactions):
+        result = kpis_mod.compute_net_cash_flow(transactions)
+        assert result == {"net_cash_flow": 0.0, "status": "surplus"}
+
+    @pytest.mark.parametrize("refunds", [("0.10", "0.20", "0.30"), ("0.30", "0.20", "0.10")])
+    def test_refunds_accumulate_exactly_in_any_order(self, refunds):
+        transactions = [row("Shop", "0.60", "DEBIT", id="d", category="Shopping")] + [
+            row("Shop", amt, "CREDIT", id=f"r{i}", is_refund=True, refund_of="d")
+            for i, amt in enumerate(refunds)]
+        netted = kpis_mod.apply_refunds(transactions)
+        assert netted[0]["amount"] == 0  # exactly, not 1e-16 off
+        assert kpis_mod.compute_core_kpis(netted)["total_spend"] == 0.0
+
+    def test_kpi_output_is_plain_numbers(self, tmp_path):
+        kpis, _ = run_main(tmp_path, [RENT[0], ing("c", "Client", "0.10", "CREDIT")],
+                           [RENT[1], cat("Client", -0.1, "Income")])
+        leaves = list(numeric_leaves(kpis))
+        assert leaves and all(type(v) in (int, float) for v in leaves)
+
+
+FOUR_TIED = [row(m, "1.00", "DEBIT", category="Other") for m in ("Delta", "Charlie", "Bravo", "Alpha")]
+
+
+class TestDeterministicRanking:
+    @pytest.mark.parametrize("order", [FOUR_TIED, FOUR_TIED[::-1]])
+    def test_top_merchant_ties_broken_by_name(self, order):
+        assert kpis_mod.compute_core_kpis(order)["top_merchants"] == ["Alpha", "Bravo", "Charlie"]
+
+    @pytest.mark.parametrize("order", [["Zed", "Amy"], ["Amy", "Zed"]])
+    def test_top_client_ties_broken_by_name(self, order):
+        transactions = [row(m, "500.00", "CREDIT") for m in order]
+        assert kpis_mod.compute_income_concentration(transactions)["top_client"] == "Amy"
+
+
 # ================================================ join with ingested.json
 
 def ing(row_id, merchant, amount, direction, day="2024-10-03", status="OK", reason=None,
