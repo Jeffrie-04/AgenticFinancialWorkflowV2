@@ -23,6 +23,7 @@ import itertools
 import json
 import os
 from datetime import date
+from typing import ClassVar
 
 import pytest
 
@@ -52,10 +53,10 @@ class FullFixtureExpected:
     total_spend = 8979.42
     total_income = 14700.0
     average_expense = 204.08
-    top_merchants = ["Square Payroll", "Best Buy", "WeWork"]
+    top_merchants: ClassVar[list[str]] = ["Square Payroll", "Best Buy", "WeWork"]
     net_cash_flow = 5720.58
     status = "surplus"
-    spend_by_category = {
+    spend_by_category: ClassVar[dict[str, dict[str, float]]] = {
         "Utilities": {"amount": 5418.76, "pct_of_spend": 60.3},
         "Shopping": {"amount": 2638.77, "pct_of_spend": 29.4},
         "Other": {"amount": 502.24, "pct_of_spend": 5.6},

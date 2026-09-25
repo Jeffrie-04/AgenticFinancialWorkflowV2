@@ -322,9 +322,9 @@ def test_date_format_needs_one_year_month_day(fmt):
         SourceConfig(date_format=fmt)
 
 
-BASE_OK = dict(id="x-0", source_file="f.csv", source_row=2, account_id="default",
-               date=date(2024, 10, 1), amount=Decimal("5.00"), direction=DEBIT,
-               merchant="Shop", status=OK)
+BASE_OK = {"id": "x-0", "source_file": "f.csv", "source_row": 2, "account_id": "default",
+           "date": date(2024, 10, 1), "amount": Decimal("5.00"), "direction": DEBIT,
+           "merchant": "Shop", "status": OK}
 
 
 @pytest.mark.parametrize("override", [

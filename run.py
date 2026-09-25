@@ -5,8 +5,8 @@ import sys
 import phase2_plan
 import phase3_categorized
 import phase3_kpisnoAI
-import phase3_summary
 import phase3_reflection
+import phase3_summary
 from afw import ingest
 
 PHASES = [
@@ -41,7 +41,7 @@ def main(business_dir=None):
             print(f"[run.py] FAILED at {name}: script exited (code={code}). "
                   f"See error output above for details. Stopping pipeline.")
             return code or 1
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - deliberate catch-all: any phase failure is reported and exits 1
             print(f"[run.py] FAILED at {name}: {type(e).__name__}: {e}. Stopping pipeline.")
             return 1
         print(f"[run.py] Completed: {name}")

@@ -10,7 +10,6 @@ import re
 from datetime import date as Date
 from decimal import Decimal
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -97,17 +96,17 @@ class Transaction(BaseModel):
     source_file: str
     source_row: int
     account_id: str
-    date: Optional[Date] = None
-    amount: Optional[Decimal] = None
-    direction: Optional[Direction] = None
+    date: Date | None = None
+    amount: Decimal | None = None
+    direction: Direction | None = None
     merchant: str = ""
     description: str = Field("", max_length=DESCRIPTION_MAX)
     currency: str = "USD"
     is_transfer: bool = False
     is_refund: bool = False
-    refund_of: Optional[str] = None
+    refund_of: str | None = None
     status: Status
-    reason: Optional[str] = None
+    reason: str | None = None
 
     @model_validator(mode="after")
     def _check_contract(self):

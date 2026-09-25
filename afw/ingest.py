@@ -25,8 +25,17 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 
-from afw.models import (DESCRIPTION_MAX, MAX_AMOUNT, Direction, SignConvention, SourceConfig,
-                        Status, Transaction, date_format_regex, normalize_merchant)
+from afw.models import (
+    DESCRIPTION_MAX,
+    MAX_AMOUNT,
+    Direction,
+    SignConvention,
+    SourceConfig,
+    Status,
+    Transaction,
+    date_format_regex,
+    normalize_merchant,
+)
 
 REJECT_THRESHOLD = 0.10  # file fails when REJECTED / rows is strictly above this
 REQUIRED_COLUMNS = {"date", "merchant", "amount"}

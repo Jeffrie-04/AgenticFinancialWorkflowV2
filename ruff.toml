@@ -1,0 +1,12 @@
+extend-exclude = [
+    # Legacy LLM-calling modules: rewritten in Phase 2/5, not linted until then.
+    "bedrock_client.py",
+    "phase2_plan.py",
+    "phase3_categorized.py",
+    "app.py",
+]
+
+[lint]
+ignore = [
+    "DTZ007",  # statement dates carry no timezone
+]
