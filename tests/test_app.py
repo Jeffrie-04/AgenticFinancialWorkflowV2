@@ -14,22 +14,28 @@ import subprocess
 import pytest
 from streamlit.testing.v1 import AppTest
 
+import phase3_kpisnoAI
+
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 APP = os.path.join(REPO, "app.py")
 OLD_FORMAT_CATEGORIZED = os.path.join(REPO, "tests", "fixtures", "categorized_sample.json")
 
-INGESTED = {"source_file": "transactions.csv", "transactions": [
-    {"id": "ok1-0", "date": "2024-10-02", "merchant": "Shell Gas", "direction": "DEBIT",
-     "amount": "420.50", "status": "OK", "reason": None},
-    {"id": "ok2-0", "date": "2024-10-01", "merchant": "Oakwood HOA", "direction": "CREDIT",
-     "amount": "6500.00", "status": "OK", "reason": None},
-    {"id": "nr-0", "date": "2024-10-03", "merchant": "", "direction": "DEBIT",
-     "amount": "55.00", "status": "NEEDS_REVIEW", "reason": "merchant_blank"},
-    {"id": "rj-0", "date": None, "merchant": "Mystery Vendor", "direction": None,
-     "amount": None, "status": "REJECTED", "reason": "amount_unparseable"},
+
+def row(row_id, merchant, amount, direction, status="OK", reason=None, category=None, day="2024-10-02"):
+    usable = status != "REJECTED"
+    return {"id": row_id, "date": day if usable else None, "merchant": merchant,
+            "direction": direction if usable else None, "amount": amount if usable else None,
+            "description": "", "is_refund": False, "refund_of": None,
+            "status": status, "reason": reason, "category": category}
+
+
+TRANSACTIONS = {"transactions": [
+    row("ok1-0", "Shell Gas", "420.50", "DEBIT", category="Other"),
+    row("ok2-0", "Oakwood HOA", "6500.00", "CREDIT", category="Income", day="2024-10-01"),
+    row("amb-0", "Costco", "30.00", "DEBIT", status="NEEDS_REVIEW", reason="join_ambiguous"),
+    row("nr-0", "", "55.00", "DEBIT", status="NEEDS_REVIEW", reason="merchant_blank", day="2024-10-03"),
+    row("rj-0", "Mystery Vendor", None, None, status="REJECTED", reason="amount_unparseable"),
 ]}
-CATEGORIZED = {"categorized": [{"id": "ok1-0", "category": "Other"}, {"id": "ok2-0", "category": "Income"}]}
-DATA_QUALITY = {"counts": {"rows": 4, "ok": 2, "needs_review": 1, "rejected": 1}}
 
 
 @pytest.fixture
@@ -54,57 +60,78 @@ def render():
     return at
 
 
-def test_new_format_shows_every_row_with_status_and_category(outputs):
-    write(outputs, "ingested.json", INGESTED)
-    write(outputs, "categorized.json", CATEGORIZED)
-    write(outputs, "data_quality.json", DATA_QUALITY)
+def transactions_table(at):
+    tables = [d.value for d in at.dataframe if "status" in d.value.columns]
+    assert len(tables) == 1
+    return tables[0]
+
+
+def table_rows(at):
+    return transactions_table(at).set_index("merchant")
+
+
+def test_table_shows_every_row_with_final_status_and_category(outputs):
+    write(outputs, "transactions.json", TRANSACTIONS)
     at = render()
 
-    table = at.dataframe[0].value
-    assert list(table["status"]) == ["NEEDS_REVIEW", "OK", "OK", "REJECTED"]  # newest first, undated last
+    table = transactions_table(at)
+    assert list(table["status"]) == ["NEEDS_REVIEW", "OK", "NEEDS_REVIEW", "OK", "REJECTED"]  # newest first
     rows = table.set_index("merchant")
     assert rows.loc["Shell Gas", "category"] == "Other"
     assert rows.loc["Shell Gas", "amount"] == 420.50
+    assert rows.loc["Costco", "reason"] == "join_ambiguous"
     assert rows.loc["Mystery Vendor", "reason"] == "amount_unparseable"
-    assert "Data quality: 2 OK · 1 needs review · 1 rejected" in [c.value for c in at.caption]
-    assert not [w for w in at.warning if "categorized" in w.value]
+    # counts come from the same rows as the table
+    assert "Data quality: 2 OK · 2 needs review · 1 rejected" in [c.value for c in at.caption]
+    assert not [w for w in at.warning if "transactions.json" in w.value]
 
 
-def test_old_format_categorized_warns_and_still_shows_rows(outputs):
-    write(outputs, "ingested.json", INGESTED)
+@pytest.mark.parametrize("reply", [["Shopping", "Dining"], ["Dining", "Shopping"]])
+def test_kpis_and_dashboard_agree_on_codex_conflicting_categories(outputs, reply):
+    ingested = [
+        {"id": "rent-0", "source_file": "t.csv", "source_row": 2, "account_id": "default",
+         "date": "2024-10-01", "amount": "1000.00", "direction": "DEBIT", "merchant": "Landlord",
+         "description": "", "currency": "USD", "is_transfer": False, "is_refund": False,
+         "refund_of": None, "status": "OK", "reason": None},
+        {"id": "a-0", "source_file": "t.csv", "source_row": 3, "account_id": "default",
+         "date": "2024-10-02", "amount": "10.00", "direction": "DEBIT", "merchant": "Shop",
+         "description": "", "currency": "USD", "is_transfer": False, "is_refund": False,
+         "refund_of": None, "status": "OK", "reason": None},
+    ]
+    write(outputs, "ingested.json", {"source_file": "t.csv", "transactions": ingested})
+    write(outputs, "categorized.json", {"categorized": [{"id": "rent-0", "category": "Utilities"}] +
+                                        [{"id": "a-0", "category": c} for c in reply]})
+    kpis = phase3_kpisnoAI.main(outputs_dir=str(outputs))
+    assert kpis["total_spend"] == 1000.0  # KPIs leave the conflicting row out...
+
+    rows = table_rows(render())
+    shop = rows.loc["Shop"]  # ...and the dashboard shows it flagged, not categorized
+    assert (shop["status"], shop["reason"]) == ("NEEDS_REVIEW", "join_ambiguous")
+    assert shop["category"] is None or shop["category"] != shop["category"]  # None / NaN
+    assert rows.loc["Landlord", "category"] == "Utilities"
+
+
+def test_missing_transactions_warns_and_never_falls_back_to_categorized(outputs):
+    # Only the pre-KPI files exist (old-format categorized.json, as in the
+    # committed demo outputs): warn, don't build a table from them.
+    write(outputs, "ingested.json", {"transactions": [row("ok1-0", "Shell Gas", "420.50", "DEBIT")]})
     shutil.copy(OLD_FORMAT_CATEGORIZED, outputs / "categorized.json")
     at = render()
-
-    assert any("old format" in w.value for w in at.warning)
-    table = at.dataframe[0].value
-    assert len(table) == 4
-    assert table["category"].isna().all()
+    assert any("transactions.json not found" in w.value for w in at.warning)
+    assert not at.dataframe
 
 
-def test_missing_categorized_warns_and_still_shows_rows(outputs):
-    write(outputs, "ingested.json", INGESTED)
-    at = render()
-    assert any("categorized.json not found" in w.value for w in at.warning)
-    assert len(at.dataframe[0].value) == 4
-
-
-def test_missing_ingested_warns(outputs):
-    write(outputs, "categorized.json", CATEGORIZED)
-    at = render()
-    assert any("ingested.json not found" in w.value for w in at.warning)
-
-
-@pytest.mark.parametrize("name,content", [
-    ("ingested.json", "{not json"),
-    ("ingested.json", {"transactions": [None]}),
-    ("categorized.json", {"categorized": "nope"}),
+@pytest.mark.parametrize("content", [
+    "{not json",
+    {"transactions": [None]},
+    {"transactions": "nope"},
+    {"transactions": [{"id": "x", "merchant": "Old row without status"}]},
 ])
-def test_malformed_files_warn_instead_of_crashing(outputs, name, content):
-    write(outputs, "ingested.json", INGESTED)
-    write(outputs, "categorized.json", CATEGORIZED)
-    write(outputs, name, content)
+def test_malformed_or_old_transactions_file_warns_instead_of_crashing(outputs, content):
+    write(outputs, "transactions.json", content)
     at = render()
-    assert any(name in w.value for w in at.warning)
+    assert any("transactions.json" in w.value for w in at.warning)
+    assert not at.dataframe
 
 
 def test_empty_outputs_folder_renders(outputs):
@@ -120,3 +147,8 @@ def test_app_never_imports_pipeline_or_model_code():
                  if isinstance(node, ast.ImportFrom) and node.module}
     assert not imported & {"bedrock_client", "run", "afw", "openai", "anthropic", "boto3"}
     assert not any(name.startswith("phase") for name in imported)
+
+
+def test_app_never_reads_categorized_json_directly():
+    with open(APP) as f:
+        assert "categorized.json" not in f.read()

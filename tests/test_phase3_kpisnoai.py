@@ -351,6 +351,12 @@ class TestExactMath:
         transactions = [row("A", "0.02", "DEBIT"), row("B", "0.03", "DEBIT")]
         assert kpis_mod.compute_core_kpis(transactions)["average_expense"] == 0.03
 
+    def test_pct_rounds_half_up(self):
+        # $1 of $2,000 is exactly 0.05%: half-up -> 0.1, half-even -> 0.0
+        transactions = [row("A", "1.00", "DEBIT", category="Dining"),
+                        row("B", "1999.00", "DEBIT", category="Utilities")]
+        assert kpis_mod.compute_spend_by_category(transactions)["Dining"]["pct_of_spend"] == 0.1
+
     def test_kpi_output_is_plain_numbers(self, tmp_path):
         kpis, _ = run_main(tmp_path, [RENT[0], ing("c", "Client", "0.10", "CREDIT")],
                            [RENT[1], cat("c", "Income")])
@@ -413,32 +419,32 @@ REFUND_20_30_LLM = [cat("d", "Shopping"), cat("r1", "Income"), cat("r2", "Income
 
 class TestJoinCategories:
     def test_category_joined_by_id(self):
-        rows, report = kpis_mod.join_categories([ing("a", "Shop", "10.00", "DEBIT")], [cat("a", "Shopping")])
+        rows, report, _ = kpis_mod.join_categories([ing("a", "Shop", "10.00", "DEBIT")], [cat("a", "Shopping")])
         assert [(r["id"], r["category"]) for r in rows] == [("a", "Shopping")]
         assert report["rows_in_kpis"] == 1
 
     def test_only_category_is_read_from_llm(self):
         # Anything else the model echoes back is ignored; money comes from the source.
-        rows, _ = kpis_mod.join_categories(
+        rows, _, _ = kpis_mod.join_categories(
             [ing("a", "Home Depot", "10.00", "DEBIT")],
             [cat("a", "Shopping", merchant="Evil Corp", amount=999999, direction="CREDIT")])
         assert (rows[0]["merchant"], rows[0]["amount"], rows[0]["direction"]) == ("Home Depot", "10.00", "DEBIT")
 
     def test_identical_source_rows_join_independently_by_id(self):
-        rows, report = kpis_mod.join_categories(
+        rows, report, _ = kpis_mod.join_categories(
             [ing("a", "Starbucks", "4.50", "DEBIT"), ing("b", "Starbucks", "4.50", "DEBIT")],
             [cat("a", "Dining"), cat("b", "Dining")])
         assert [r["id"] for r in rows] == ["a", "b"]
         assert report["join_ambiguous"] == 0
 
     def test_missing_id_is_join_missing(self):
-        rows, report = kpis_mod.join_categories([ing("a", "Shop", "10.00", "DEBIT")], [])
+        rows, report, _ = kpis_mod.join_categories([ing("a", "Shop", "10.00", "DEBIT")], [])
         assert rows == []
         assert report["join_missing"] == 1
         assert report["excluded_total"] == {"debit": "10.00", "credit": "0.00", "rows": 1}
 
     def test_unknown_id_is_ignored_and_counted(self):
-        rows, report = kpis_mod.join_categories(
+        rows, report, _ = kpis_mod.join_categories(
             [ing("a", "Shop", "10.00", "DEBIT")],
             [cat("a", "Shopping"), cat("ghost", "Shopping"), {"category": "Other"}])
         assert [r["id"] for r in rows] == ["a"]
@@ -447,7 +453,7 @@ class TestJoinCategories:
     def test_ids_of_rows_never_sent_count_as_unknown(self):
         # REJECTED and NEEDS_REVIEW rows never reach the model, so their ids
         # coming back are unknown; the rows themselves stay out of the KPIs.
-        rows, report = kpis_mod.join_categories(
+        rows, report, _ = kpis_mod.join_categories(
             [ing("a", "Shop", "10.00", "DEBIT"),
              ing("r", "Verizon", None, None, status="REJECTED", reason="amount_zero"),
              ing("n", "", "55.00", "DEBIT", status="NEEDS_REVIEW", reason="merchant_blank")],
@@ -457,24 +463,24 @@ class TestJoinCategories:
         assert report["join_missing"] == report["join_ambiguous"] == 0
 
     def test_invalid_category_is_needs_review(self):
-        rows, report = kpis_mod.join_categories([ing("a", "Shop", "10.00", "DEBIT")], [cat("a", "Groceries")])
+        rows, report, _ = kpis_mod.join_categories([ing("a", "Shop", "10.00", "DEBIT")], [cat("a", "Groceries")])
         assert rows == []
         assert report["category_invalid"] == 1
 
     def test_same_id_conflicting_categories_is_ambiguous(self):
-        rows, report = kpis_mod.join_categories(
+        rows, report, _ = kpis_mod.join_categories(
             [ing("a", "Shop", "10.00", "DEBIT")], [cat("a", "Shopping"), cat("a", "Other")])
         assert rows == []
         assert report["join_ambiguous"] == 1
 
     def test_same_id_repeated_with_same_category_counts_once(self):
-        rows, report = kpis_mod.join_categories(
+        rows, report, _ = kpis_mod.join_categories(
             [ing("a", "Shop", "10.00", "DEBIT")], [cat("a", "Shopping"), cat("a", "Shopping")])
         assert [r["id"] for r in rows] == ["a"]
         assert report["join_ambiguous"] == 0
 
     def test_refund_of_excluded_debit_is_needs_review(self):
-        rows, report = kpis_mod.join_categories(
+        rows, report, _ = kpis_mod.join_categories(
             [ing("d", "Home Depot", "200.00", "DEBIT"),  # no category -> excluded
              ing("r", "Home Depot", "50.00", "CREDIT", day="2024-10-05", is_refund=True, refund_of="d")],
             [cat("r", "Income")])
@@ -482,6 +488,54 @@ class TestJoinCategories:
         assert report["join_missing"] == 1
         assert report["refund_original_excluded"] == 1
         assert report["excluded_total"] == {"debit": "200.00", "credit": "50.00", "rows": 2}
+
+
+def read_transactions(outputs_dir):
+    with open(os.path.join(outputs_dir, "transactions.json")) as f:
+        return {t["id"]: t for t in json.load(f)["transactions"]}
+
+
+class TestTransactionsFile:
+    """outputs/transactions.json: every ingested row with its final category,
+    status and reason after the join. The dashboard's only per-row source."""
+
+    def test_every_ingested_row_with_final_status_reason_and_category(self, tmp_path):
+        ingested = [
+            RENT[0],
+            ing("r", "Verizon", None, None, status="REJECTED", reason="amount_zero"),
+            ing("n", "", "55.00", "DEBIT", status="NEEDS_REVIEW", reason="merchant_blank"),
+            ing("m", "Shop", "10.00", "DEBIT"),
+            ing("x", "Shop", "20.00", "DEBIT"),
+            ing("d", "Home Depot", "200.00", "DEBIT"),
+            ing("rf", "Home Depot", "50.00", "CREDIT", is_refund=True, refund_of="d"),
+            ing("q", "Store", "5.00", "DEBIT"),
+            ing("rq", "Store", "5.00", "CREDIT", is_refund=True, refund_of="q"),
+        ]
+        run_main(tmp_path, ingested, [RENT[1], cat("m", "Groceries"), cat("d", "Shopping"), cat("rf", "Income")])
+
+        rows = read_transactions(tmp_path)
+        assert list(rows) == [t["id"] for t in ingested]  # every row, source order
+        assert {i: (t["status"], t["reason"], t["category"]) for i, t in rows.items()} == {
+            "rent": ("OK", None, "Utilities"),
+            "r": ("REJECTED", "amount_zero", None),
+            "n": ("NEEDS_REVIEW", "merchant_blank", None),
+            "m": ("NEEDS_REVIEW", "category_invalid", None),
+            "x": ("NEEDS_REVIEW", "join_missing", None),
+            "d": ("OK", None, "Shopping"),
+            "rf": ("OK", None, "Shopping"),  # a refund carries its original DEBIT's category
+            "q": ("NEEDS_REVIEW", "join_missing", None),
+            "rq": ("NEEDS_REVIEW", "refund_original_excluded", None),
+        }
+        assert (rows["d"]["date"], rows["d"]["amount"], rows["d"]["merchant"]) == ("2024-10-03", "200.00", "Home Depot")
+
+    @pytest.mark.parametrize("reply", [[cat("a", "Shopping"), cat("a", "Dining")],
+                                       [cat("a", "Dining"), cat("a", "Shopping")]])
+    def test_codex_conflicting_categories_same_result_in_either_order(self, tmp_path, reply):
+        kpis, report = run_main(tmp_path, [RENT[0], ing("a", "Shop", "10.00", "DEBIT")], [RENT[1], *reply])
+        a = read_transactions(tmp_path)["a"]
+        assert (a["status"], a["reason"], a["category"]) == ("NEEDS_REVIEW", "join_ambiguous", None)
+        assert report["join_ambiguous"] == 1
+        assert kpis["total_spend"] == 1000.0  # the ambiguous row is not in the KPIs
 
 
 class TestRefundNetting:
@@ -591,6 +645,7 @@ class TestMainEndToEnd:
             run_main(tmp_path, [RENT[0]], [RENT[1]])
         dq = json.loads((tmp_path / "data_quality.json").read_text())
         assert dq["kpi_join"]["rows_in_kpis"] == 1
+        assert read_transactions(tmp_path)["rent"]["status"] == "OK"
         assert not (tmp_path / "kpis.json").exists()
 
     def test_main_fails_without_ingested_json(self, tmp_path):

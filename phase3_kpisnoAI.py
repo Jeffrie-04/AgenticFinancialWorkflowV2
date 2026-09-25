@@ -14,6 +14,8 @@ INPUT : outputs/ingested.json     (validated source rows from afw/ingest.py)
         Only {id, category} is taken from here, joined on id; the model
         never sees or returns amounts, dates or signs.
 OUTPUT: outputs/kpis.json
+        outputs/transactions.json  (every ingested row with its final
+                                    category, status and reason)
         outputs/data_quality.json  ("kpi_join" section added)
 """
 
@@ -73,7 +75,9 @@ def load_ingested(path="outputs/ingested.json"):
 
 def join_categories(ingested, categorized):
     """Attach the LLM's category to each OK source row, by id. Returns
-    (rows, report).
+    (rows, report, results): the rows used for the KPIs, the join counts,
+    and every ingested row with its final category, status and reason —
+    the single per-row record written to transactions.json.
 
     Only ids of OK rows were ever sent to the model. An entry with any other
     id (or none) is ignored and counted. An OK row is left out of the KPIs
@@ -116,13 +120,22 @@ def join_categories(ingested, categorized):
         else:
             joined.append({**row, "category": category})
 
-    kept_debits = {r["id"] for r in joined if not r["is_refund"]}
+    kept_debits = {r["id"]: r["category"] for r in joined if not r["is_refund"]}
     rows = []
     for row in joined:
-        if row["is_refund"] and row["refund_of"] not in kept_debits:
-            exclude(row, "refund_original_excluded")
-        else:
+        if not row["is_refund"]:
             rows.append(row)
+        elif row["refund_of"] in kept_debits:
+            rows.append({**row, "category": kept_debits[row["refund_of"]]})
+        else:
+            exclude(row, "refund_original_excluded")
+
+    final = {r["id"]: (Status.OK.value, None, r["category"]) for r in rows}
+    final.update({r["id"]: (r["status"], r["reason"], None) for r in excluded})
+    results = []
+    for t in ingested:
+        status, reason, category = final.get(t["id"], (t["status"], t["reason"], None))
+        results.append({**t, "category": category, "status": status, "reason": reason})
 
     excluded_amount = lambda d: str(sum((Decimal(r["amount"]) for r in excluded if r["direction"] == d),
                                         Decimal("0.00")))
@@ -135,7 +148,7 @@ def join_categories(ingested, categorized):
             "credit": excluded_amount(Direction.CREDIT.value),
             "rows": len(excluded),
         },
-    }
+    }, results
 
 
 def to_decimal(amount):
@@ -331,9 +344,11 @@ def record_join_report(outputs_dir, report):
 def main(outputs_dir="outputs"):
     ingested = load_ingested(os.path.join(outputs_dir, "ingested.json"))
     categorized = load_transactions(os.path.join(outputs_dir, "categorized.json"))
-    transactions, join_report = join_categories(ingested, categorized)
+    transactions, join_report, results = join_categories(ingested, categorized)
     # Written first, so the record of what was left out survives a KPI failure.
     record_join_report(outputs_dir, join_report)
+    with open(os.path.join(outputs_dir, "transactions.json"), "w") as f:
+        json.dump({"transactions": results}, f, indent=2)
     transactions = apply_refunds(transactions)
 
     kpis = {}

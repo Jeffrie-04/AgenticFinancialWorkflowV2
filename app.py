@@ -67,22 +67,21 @@ def load_list(path, key):
     return items, None
 
 
-def build_transaction_table(transactions, categorized):
-    """Every ingested row, with its category joined from categorized.json by
-    id. Status and reason are columns, so NEEDS_REVIEW and REJECTED rows are
-    shown and flagged rather than hidden."""
-    categories = {c.get("id"): c.get("category") for c in categorized}
+def build_transaction_table(transactions):
+    """Rows from transactions.json, written by the KPI stage: every ingested
+    row with its final category, status and reason — the same per-row result
+    the KPIs used. NEEDS_REVIEW and REJECTED rows are shown and flagged."""
     df = pd.DataFrame([{
         "status": t.get("status"),
         "date": t.get("date"),
         "merchant": t.get("merchant"),
         "direction": t.get("direction"),
         "amount": t.get("amount"),
-        "category": categories.get(t.get("id")),
+        "category": t.get("category"),
         "reason": t.get("reason"),
     } for t in transactions])
-    df["amount"] = pd.to_numeric(df["amount"], errors="coerce")  # strings in ingested.json; None if REJECTED
-    return df.sort_values("date", ascending=False, na_position="last")
+    df["amount"] = pd.to_numeric(df["amount"], errors="coerce")  # exact strings in the file; None if REJECTED
+    return df.sort_values("date", ascending=False, na_position="last", kind="stable")
 
 
 def money(x):
@@ -105,9 +104,7 @@ with st.sidebar:
 business_dir = all_businesses[selected_label]
 OUTPUTS_DIR = os.path.join(business_dir, "outputs")
 KPIS_PATH = os.path.join(OUTPUTS_DIR, "kpis.json")
-CATEGORIZED_PATH = os.path.join(OUTPUTS_DIR, "categorized.json")
-INGESTED_PATH = os.path.join(OUTPUTS_DIR, "ingested.json")
-DATA_QUALITY_PATH = os.path.join(OUTPUTS_DIR, "data_quality.json")
+TRANSACTIONS_PATH = os.path.join(OUTPUTS_DIR, "transactions.json")
 SUMMARY_PATH = os.path.join(OUTPUTS_DIR, "summary.txt")
 REFLECTION_PATH = os.path.join(OUTPUTS_DIR, "reflection.txt")
 
@@ -207,41 +204,25 @@ else:
 # ------------------------------------------------------------- transactions
 
 st.header("Transactions")
-transactions, ingested_error = load_list(INGESTED_PATH, "transactions")
-if ingested_error == "missing":
-    st.warning("ingested.json not found yet — run the pipeline to generate it.")
-elif ingested_error == "malformed":
-    st.warning("ingested.json isn't in the expected format — re-run the pipeline to regenerate it.")
+transactions, transactions_error = load_list(TRANSACTIONS_PATH, "transactions")
+if transactions_error == "missing":
+    st.warning("transactions.json not found yet — run the pipeline to generate it.")
+elif transactions_error or not all("status" in t for t in transactions):
+    st.warning("transactions.json isn't in the expected format — re-run the pipeline to regenerate it.")
+elif not transactions:
+    st.caption("No transactions to display.")
 else:
-    categorized, categorized_error = load_list(CATEGORIZED_PATH, "categorized")
-    if categorized_error == "missing":
-        st.warning("categorized.json not found yet — categories are blank until the pipeline runs.")
-    elif categorized_error == "malformed":
-        st.warning("categorized.json isn't in the expected format — categories are blank; "
-                   "re-run the pipeline to regenerate it.")
-    elif not all("id" in c for c in categorized):
-        st.warning("categorized.json is in the old format (no ids) — categories are blank; "
-                   "re-run the pipeline to regenerate it.")
-        categorized_error = "old_format"
-    if categorized_error:
-        categorized = []
-
-    if not transactions:
-        st.caption("No transactions to display.")
-    else:
-        st.dataframe(
-            build_transaction_table(transactions, categorized),
-            width="stretch",
-            hide_index=True,
-            column_config={
-                "amount": st.column_config.NumberColumn("amount", format="$%.2f"),
-            },
-        )
-        data_quality, _ = load_json(DATA_QUALITY_PATH)
-        counts = data_quality.get("counts") if isinstance(data_quality, dict) else None
-        if isinstance(counts, dict):
-            st.caption(f"Data quality: {counts.get('ok', 0)} OK · {counts.get('needs_review', 0)} "
-                       f"needs review · {counts.get('rejected', 0)} rejected")
+    st.dataframe(
+        build_transaction_table(transactions),
+        width="stretch",
+        hide_index=True,
+        column_config={
+            "amount": st.column_config.NumberColumn("amount", format="$%.2f"),
+        },
+    )
+    statuses = [t["status"] for t in transactions]
+    st.caption(f"Data quality: {statuses.count('OK')} OK · {statuses.count('NEEDS_REVIEW')} "
+               f"needs review · {statuses.count('REJECTED')} rejected")
 
 # ------------------------------------------------------------ re-run control
 

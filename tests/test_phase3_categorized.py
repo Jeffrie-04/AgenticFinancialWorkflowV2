@@ -2,13 +2,18 @@
 Tests for phase3_categorized.py and afw/llm_input.py — what the categorizer
 sends to the model and what it keeps from the response. call_model is stubbed.
 """
+import ast
 import json
+import os
+import re
 
 import pytest
 
 import phase3_categorized as cat_mod
 from afw.llm_input import prompt_line
 from afw.models import Category
+
+GOLDEN_PROMPT = os.path.join(os.path.dirname(__file__), "fixtures", "prompts", "categorizer_prompt.txt")
 
 
 def ok_row(row_id, merchant="Shop", description="Supplies", direction="DEBIT", status="OK"):
@@ -24,6 +29,24 @@ def test_prompt_lists_every_category_enum_value():
     prompt = cat_mod.build_prompt([ok_row("a")])
     for c in Category:
         assert f"- {c.value}:" in prompt
+
+
+def test_prompt_is_byte_identical_to_golden():
+    # Golden captured before category names were moved to the enum; any
+    # wording change to the prompt must update this file deliberately.
+    rows = [ok_row("a1b2-0", merchant="Oakwood HOA", description="Monthly contract", direction="CREDIT"),
+            ok_row("c3d4-0", merchant='Café "Nero" <b>', description="Crew\ncoffee")]
+    with open(GOLDEN_PROMPT, encoding="utf-8", newline="") as f:
+        assert cat_mod.build_prompt(rows) == f.read()
+
+
+def test_no_category_name_is_hardcoded():
+    with open(cat_mod.__file__, encoding="utf-8") as f:
+        tree = ast.parse(f.read())
+    literals = [n.value for n in ast.walk(tree) if isinstance(n, ast.Constant) and isinstance(n.value, str)]
+    for c in Category:
+        pattern = re.compile(rf"\b{c.value}\b")
+        assert not [s for s in literals if pattern.search(s)], f"hardcoded {c.value!r}; use Category"
 
 
 def test_prompt_sends_id_merchant_description_direction_only():

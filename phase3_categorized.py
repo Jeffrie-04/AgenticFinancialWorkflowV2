@@ -22,7 +22,7 @@ ROWS_END = "</transactions>"
 # What belongs in each category. The category names always come from the enum.
 CATEGORY_GUIDE = {
     Category.INCOME: "money received: client and project payments, deposits, interest. "
-                     "Every CREDIT row is Income.",
+                     f"Every CREDIT row is {Category.INCOME.value}.",
     Category.UTILITIES: "recurring services and bills: software/SaaS, rent, insurance, phone, "
                         "electric, gas, water, internet, payroll, professional services",
     Category.SHOPPING: "retail and supplies: office supplies, equipment, furniture, materials",
