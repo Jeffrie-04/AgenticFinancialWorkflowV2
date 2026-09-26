@@ -1,29 +1,36 @@
 """
 phase3_categorized.py — LLM categorization of validated transactions.
 
-INPUT : outputs/ingested.json. Only status OK rows are sent to the model;
-        REJECTED and NEEDS_REVIEW rows never appear in a prompt.
-OUTPUT: outputs/categorized.json  {"categorized": [{"id": ..., "category": ...}]}
+INPUT : outputs/ingested.json. Only OK non-refund DEBITs are sent to the
+        model; REJECTED and NEEDS_REVIEW rows never appear in a prompt.
+        OK non-refund CREDITs are income by rule; refunds take their original
+        DEBIT's category in the KPI join, so neither is sent.
+OUTPUT: outputs/categorized.json
+        {"categorized": [{"id", "category"}],   validated and rule-assigned
+         "review": [{"id", "reason"}],          rows the reply failed for
+         "llm": {...counts}}
 
 The model sees id, merchant, description and direction per row (no amounts,
-no dates) and returns only a category per id. phase3_kpisnoAI.py joins on id
-and validates each category against the Category enum.
+no dates) and returns only a category per id. The reply is untrusted: it is
+validated by afw/guards/output_validation.check_reply, and every row it fails
+for goes to "review" with a reason (NEEDS_REVIEW), never guessed.
 """
 import json
 import os
+from collections import Counter
 
-from afw.guards.output_validation import extract_json
-from afw.llm_input import load_ok_rows, prompt_line
-from afw.models import Category
+from afw.guards.output_validation import check_reply, extract_json
+from afw.llm_input import load_ok_rows, model_rows, prompt_line
+from afw.models import DEBIT_CATEGORIES, Category, Direction
 from bedrock_client import call_model
 
 ROWS_START = "<transactions>"
 ROWS_END = "</transactions>"
+LLM_COUNTS = ("calls", "retried_ids", "invalid_items", "unknown_ids", "duplicate_ids",
+              "unparseable_replies", "rule_assigned", "refunds_not_sent")
 
 # What belongs in each category. The category names always come from the enum.
 CATEGORY_GUIDE = {
-    Category.INCOME: "money received: client and project payments, deposits, interest. "
-                     f"Every CREDIT row is {Category.INCOME.value}.",
     Category.UTILITIES: "recurring services and bills: software/SaaS, rent, insurance, phone, "
                         "electric, gas, water, internet, payroll, professional services",
     Category.SHOPPING: "retail and supplies: office supplies, equipment, furniture, materials",
@@ -34,7 +41,7 @@ CATEGORY_GUIDE = {
 
 
 def build_prompt(rows):
-    names = ", ".join(c.value for c in Category)
+    names = ", ".join(c.value for c in DEBIT_CATEGORIES)
     guide = "\n".join(f"- {c.value}: {text}" for c, text in CATEGORY_GUIDE.items())
     block = "\n".join(prompt_line({"id": t["id"], "merchant": t["merchant"],
                                    "description": t["description"], "direction": t["direction"]})
@@ -64,19 +71,41 @@ exactly one entry per input id, copying each id exactly:
 
 def main(outputs_dir="outputs"):
     rows = load_ok_rows(outputs_dir)
-    categorized, error = [], None
-    if rows:
-        response, error = extract_json(call_model(build_prompt(rows)))
-        if response is not None and not isinstance(response.get("categorized"), list):
-            error = "reply has no 'categorized' list"
-        if not error:
-            # Keep only id and category: nothing else from the model is ever used.
-            categorized = [{"id": c.get("id"), "category": c.get("category")} for c in response["categorized"]]
-    print(f"Categorized: {len(categorized)}/{len(rows)} transactions" + (f" ({error})" if error else ""))
+    to_model = model_rows(rows)
+    counts = Counter(rule_assigned=sum(1 for t in rows if t["direction"] == Direction.CREDIT.value
+                                       and not t["is_refund"]),
+                     refunds_not_sent=sum(1 for t in rows if t["is_refund"]))
+    accepted, failures, error = {}, {}, None
 
-    # An unusable reply is recorded, not raised: the KPI join then marks every
-    # row join_missing (NEEDS_REVIEW), so nothing crashes and nothing is dropped.
-    result = {"categorized": categorized, **({"error": error} if error else {})}
+    if to_model:
+        counts["calls"] += 1
+        response, error = extract_json(call_model(build_prompt(to_model)))
+        if not error:
+            check = check_reply(response, {t["id"]: t for t in to_model})
+            error = check.error
+            accepted, failures = check.accepted, check.failures
+            counts.update(check.counts)
+        if error:
+            counts["unparseable_replies"] += 1
+            failures = {t["id"]: "llm_unparseable" for t in to_model}
+
+    categorized, review = [], []
+    for t in rows:
+        if t["is_refund"]:
+            continue
+        if t["direction"] == Direction.CREDIT.value:
+            categorized.append({"id": t["id"], "category": Category.INCOME.value})
+        elif t["id"] in accepted:
+            categorized.append({"id": t["id"], "category": accepted[t["id"]]})
+        else:
+            review.append({"id": t["id"], "reason": failures[t["id"]]})
+    print(f"Categorized: {len(categorized)} rows ({counts['rule_assigned']} by rule), "
+          f"{len(review)} to review" + (f" ({error})" if error else ""))
+
+    # Nothing from the model is kept except validated {id, category}; failures
+    # are recorded per row, never raised, so nothing crashes and nothing is dropped.
+    result = {"categorized": categorized, "review": review,
+              "llm": {k: counts[k] for k in LLM_COUNTS}, **({"error": error} if error else {})}
     with open(os.path.join(outputs_dir, "categorized.json"), "w") as f:
         json.dump(result, f, indent=2)
 

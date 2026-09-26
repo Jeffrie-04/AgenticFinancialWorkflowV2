@@ -25,7 +25,7 @@ from collections import Counter, defaultdict
 from datetime import date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 
-from afw.models import Category, Direction, Status
+from afw.models import Category, Direction, Status, direction_allows
 
 # Categories treated as committed/fixed monthly obligations vs discretionary.
 # NOTE: this is a category-based heuristic, not true recurrence detection.
@@ -36,8 +36,14 @@ from afw.models import Category, Direction, Status
 FIXED_CATEGORIES = {Category.UTILITIES.value}
 DISCRETIONARY_CATEGORIES = {Category.DINING.value, Category.SHOPPING.value, Category.OTHER.value}
 
-# Reasons a source row that passed ingest is still left out of the KPIs.
-JOIN_PROBLEMS = ("join_ambiguous", "join_missing", "category_invalid", "refund_original_excluded")
+# Reasons a source row that passed ingest is still left out of the KPIs. The
+# llm_* reasons and category_direction_mismatch are decided by the
+# categorizer's reply validation (categorized.json "review"); the join also
+# re-checks direction itself, so a stale or hand-edited file can't bypass it.
+LLM_REVIEW_REASONS = ("llm_unparseable", "llm_missing", "llm_conflict", "llm_invalid_category",
+                      "category_direction_mismatch")
+JOIN_PROBLEMS = ("join_ambiguous", "join_missing", "category_invalid", "refund_original_excluded",
+                 *LLM_REVIEW_REASONS)
 CATEGORY_VALUES = {c.value for c in Category}
 
 # KPI money math is exact Decimal; values are rounded half-up only when
@@ -73,7 +79,7 @@ def load_ingested(path="outputs/ingested.json"):
     return data["transactions"]
 
 
-def join_categories(ingested, categorized):
+def join_categories(ingested, categorized, review=()):
     """Attach the LLM's category to each OK source row, by id. Returns
     (rows, report, results): the rows used for the KPIs, the join counts,
     and every ingested row with its final category, status and reason —
@@ -83,11 +89,13 @@ def join_categories(ingested, categorized):
     id (or none) is ignored and counted. An OK row is left out of the KPIs
     (NEEDS_REVIEW, counted, never silently dropped) when the model returned
     no category for its id, conflicting categories for it, or a category
-    that isn't in the Category enum. A refund takes no category of its own:
-    it is netted against its original DEBIT, and left out only if that
-    DEBIT is.
+    that isn't in the Category enum. A row the categorizer put in `review`
+    keeps that reason, and a category that contradicts the row's direction is
+    category_direction_mismatch. A refund takes no category of its own: it
+    is netted against its original DEBIT, and left out only if that DEBIT is.
     """
     report = Counter()
+    review_reasons = {r["id"]: r["reason"] for r in review}
     sent_ids = {t["id"] for t in ingested if t["status"] == Status.OK.value}
     categories = defaultdict(set)
     for c in categorized:
@@ -111,12 +119,16 @@ def join_categories(ingested, categorized):
             joined.append(row)
             continue
         found = categories.get(row["id"], set())
-        if not found:
+        if row["id"] in review_reasons:
+            exclude(row, review_reasons[row["id"]])
+        elif not found:
             exclude(row, "join_missing")
         elif len(found) > 1:
             exclude(row, "join_ambiguous")
         elif (category := next(iter(found))) not in CATEGORY_VALUES:
             exclude(row, "category_invalid")
+        elif not direction_allows(row["direction"], category):
+            exclude(row, "category_direction_mismatch")
         else:
             joined.append({**row, "category": category})
 
@@ -343,8 +355,11 @@ def record_join_report(outputs_dir, report):
 
 def main(outputs_dir="outputs"):
     ingested = load_ingested(os.path.join(outputs_dir, "ingested.json"))
-    categorized = load_transactions(os.path.join(outputs_dir, "categorized.json"))
-    transactions, join_report, results = join_categories(ingested, categorized)
+    with open(os.path.join(outputs_dir, "categorized.json")) as f:
+        categorizer_output = json.load(f)
+    transactions, join_report, results = join_categories(
+        ingested, categorizer_output["categorized"], categorizer_output.get("review", []))
+    join_report["llm"] = categorizer_output.get("llm", {})
     # Written first, so the record of what was left out survives a KPI failure.
     record_join_report(outputs_dir, join_report)
     with open(os.path.join(outputs_dir, "transactions.json"), "w") as f:

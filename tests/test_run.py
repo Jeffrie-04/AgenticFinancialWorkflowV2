@@ -116,10 +116,21 @@ def test_codex_finding1_only_ok_rows_reach_any_prompt(tmp_path, monkeypatch):
         assert not re.search(r"\babc\b", prompt)  # word match: hex ids may contain "abc"
         assert not any(i in prompt for i in excluded_ids)
 
-    # Positive control: the categorizer prompt carries every OK row.
+    # Positive control: the categorizer prompt carries every OK DEBIT; OK
+    # CREDITs are rule-assigned Income and never sent to the categorizer.
+    debit_ids = [t["id"] for t in ingested if t["status"] == "OK" and t["direction"] == "DEBIT"]
+    credit_ids = [t["id"] for t in ingested if t["status"] == "OK" and t["direction"] == "CREDIT"]
+    assert len(debit_ids) == 6 and len(credit_ids) == 2
     categorizer_prompts = [p for p in prompts if phase3_categorized.ROWS_START in p]
     assert len(categorizer_prompts) == 1
-    assert all(i in categorizer_prompts[0] for i in ok_ids)
+    assert all(i in categorizer_prompts[0] for i in debit_ids)
+    assert not any(i in categorizer_prompts[0] for i in credit_ids)
+    # Q6: the plan phase's sample rows are non-refund DEBITs too.
+    plan_prompt = next(p for p in prompts if "plan_steps" in p)
+    credit_merchants = [t["merchant"] for t in ingested if t["status"] == "OK" and t["direction"] == "CREDIT"]
+    assert credit_merchants == ["Oakwood HOA", "Riverside Apartments"]
+    assert not any(m in plan_prompt for m in credit_merchants)
+    assert "Shell Gas" in plan_prompt  # positive control: DEBIT sample rows are there
 
     categorized = json.loads((outputs / "categorized.json").read_text())["categorized"]
     assert sorted(c["id"] for c in categorized) == sorted(ok_ids)

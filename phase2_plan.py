@@ -1,22 +1,25 @@
 """
 phase2_plan.py — LLM analysis plan.
 
-INPUT : outputs/ingested.json. Only status OK rows are used; REJECTED and
-        NEEDS_REVIEW rows never appear in a prompt.
+INPUT : outputs/ingested.json. Only status OK rows are used, and only
+        non-refund DEBITs appear as sample rows; REJECTED and NEEDS_REVIEW
+        rows never appear in a prompt.
 OUTPUT: outputs/plan.json
 """
 import json
 import os
 
 from afw.guards.output_validation import extract_json
-from afw.llm_input import load_ok_rows, prompt_line
+from afw.llm_input import load_ok_rows, model_rows, prompt_line
 from bedrock_client import call_model
 
 
 def main(outputs_dir="outputs"):
     rows = load_ok_rows(outputs_dir)
+    # Sample rows follow the same rule as the categorizer: non-refund DEBITs
+    # only, so client names in CREDITs stay local. Counts and dates aren't text.
     sample = "\n".join(prompt_line({k: t[k] for k in ("date", "merchant", "amount", "direction")})
-                       for t in rows[:5])
+                       for t in model_rows(rows)[:5])
     dates = sorted(t["date"] for t in rows)  # ISO dates sort chronologically
     date_range = f"{dates[0]} to {dates[-1]}" if dates else "n/a"
 

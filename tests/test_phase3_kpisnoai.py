@@ -398,9 +398,10 @@ def cat(row_id, category, **extra):
     return {"id": row_id, "category": category, **extra}
 
 
-def run_main(tmp_path, ingested, categorized):
+def run_main(tmp_path, ingested, categorized, **extra):
+    """extra: optional categorized.json keys written by the categorizer (review, llm)."""
     (tmp_path / "ingested.json").write_text(json.dumps({"source_file": "t.csv", "transactions": ingested}))
-    (tmp_path / "categorized.json").write_text(json.dumps({"categorized": categorized}))
+    (tmp_path / "categorized.json").write_text(json.dumps({"categorized": categorized, **extra}))
     kpis = kpis_mod.main(outputs_dir=str(tmp_path))
     dq = json.loads((tmp_path / "data_quality.json").read_text())
     return kpis, dq["kpi_join"]
@@ -536,6 +537,55 @@ class TestTransactionsFile:
         assert (a["status"], a["reason"], a["category"]) == ("NEEDS_REVIEW", "join_ambiguous", None)
         assert report["join_ambiguous"] == 1
         assert kpis["total_spend"] == 1000.0  # the ambiguous row is not in the KPIs
+
+
+CATEGORIZER_REVIEW = [
+    {"id": "m", "reason": "llm_missing"}, {"id": "c", "reason": "llm_conflict"},
+    {"id": "i", "reason": "llm_invalid_category"}, {"id": "x", "reason": "category_direction_mismatch"},
+    {"id": "u", "reason": "llm_unparseable"}]
+CATEGORIZER_LLM = {"calls": 1, "retried_ids": 0, "invalid_items": 2, "unknown_ids": 1, "duplicate_ids": 0,
+                   "unparseable_replies": 0, "rule_assigned": 1, "refunds_not_sent": 0}
+
+
+class TestCategorizerReview:
+    """Reasons decided by the categorizer's reply validation (categorized.json
+    "review") and its counts ("llm") reach transactions.json and
+    data_quality.json; the KPI join adds a last direction check."""
+
+    def test_review_reasons_reach_transactions_and_data_quality(self, tmp_path):
+        ingested = [RENT[0]] + [ing(i, f"Vendor {i}", "10.00", "DEBIT") for i in "mcixu"]
+        kpis, report = run_main(tmp_path, ingested, [RENT[1]], review=CATEGORIZER_REVIEW, llm=CATEGORIZER_LLM)
+
+        rows = read_transactions(tmp_path)
+        for r in CATEGORIZER_REVIEW:
+            assert (rows[r["id"]]["status"], rows[r["id"]]["reason"], rows[r["id"]]["category"]) == (
+                "NEEDS_REVIEW", r["reason"], None)
+        assert rows["rent"]["status"] == "OK"
+        assert kpis["total_spend"] == 1000.0  # none of the reviewed rows reach the KPIs
+        for r in CATEGORIZER_REVIEW:
+            assert report[r["reason"]] == 1
+        assert report["join_missing"] == 0  # a review reason is used instead of join_missing
+        assert report["llm"] == CATEGORIZER_LLM
+
+    def test_review_reason_wins_over_a_stale_category_entry(self, tmp_path):
+        _, report = run_main(tmp_path, [RENT[0], ing("m", "Shop", "10.00", "DEBIT")],
+                             [RENT[1], cat("m", "Shopping")], review=[{"id": "m", "reason": "llm_conflict"}])
+        assert read_transactions(tmp_path)["m"]["reason"] == "llm_conflict"
+        assert report["llm_conflict"] == 1 and report["rows_in_kpis"] == 1
+
+    def test_join_rejects_debit_labelled_income_even_without_review(self, tmp_path):
+        # Q5: a hand-edited or stale categorized.json can't put a DEBIT into the KPIs as Income.
+        kpis, report = run_main(tmp_path, [RENT[0], ing("d", "Shop", "10.00", "DEBIT")],
+                                [RENT[1], cat("d", "Income")])
+        d = read_transactions(tmp_path)["d"]
+        assert (d["status"], d["reason"], d["category"]) == ("NEEDS_REVIEW", "category_direction_mismatch", None)
+        assert report["category_direction_mismatch"] == 1
+        assert kpis["total_spend"] == 1000.0
+
+    def test_old_categorized_without_review_or_llm_still_joins(self, tmp_path):
+        _, report = run_main(tmp_path, [RENT[0]], [RENT[1]])
+        assert report["rows_in_kpis"] == 1
+        assert report["llm"] == {}
 
 
 class TestRefundNetting:

@@ -101,11 +101,91 @@ def test_categorizer_survives_unusable_reply(tmp_path, monkeypatch, reply):
     assert written["error"]  # recorded; the KPI join then marks the rows join_missing
 
 
-def test_unusable_categorizer_reply_becomes_join_missing_at_kpi_stage(tmp_path, monkeypatch):
+def test_unusable_categorizer_reply_reaches_kpi_stage_as_needs_review(tmp_path, monkeypatch):
     import phase3_kpisnoAI
     write_ingested(tmp_path, [ok_row("a"), ok_row("b", direction="CREDIT")])
     monkeypatch.setattr(phase3_categorized, "call_model", lambda prompt: "Sorry, I can't do that.")
     phase3_categorized.main(outputs_dir=str(tmp_path))
     phase3_kpisnoAI.main(outputs_dir=str(tmp_path))
     rows = json.loads((tmp_path / "transactions.json").read_text())["transactions"]
-    assert [(r["status"], r["reason"]) for r in rows] == [("NEEDS_REVIEW", "join_missing")] * 2
+    # The DEBIT was sent and the reply was unusable; the CREDIT is Income by rule.
+    assert [(r["status"], r["reason"], r["category"]) for r in rows] == [
+        ("NEEDS_REVIEW", "llm_unparseable", None), ("OK", None, "Income")]
+
+
+# ----------------------------------------------------------------- check_reply
+
+SENT = {"a": {"id": "a", "direction": "DEBIT"}, "b": {"id": "b", "direction": "DEBIT"}}
+
+
+def check(items):
+    from afw.guards.output_validation import check_reply
+    return check_reply({"categorized": items}, SENT)
+
+
+@pytest.mark.parametrize("obj", [{"items": []}, {"categorized": "x"}, {"categorized": None}, {}])
+def test_envelope_without_categorized_list_is_an_error(obj):
+    from afw.guards.output_validation import check_reply
+    result = check_reply(obj, SENT)
+    assert result.error == "reply has no 'categorized' list"
+    assert result.accepted == {} and result.failures == {}
+
+
+def test_all_ids_valid():
+    result = check([{"id": "a", "category": "Shopping"}, {"id": "b", "category": "Dining", "extra": 1}])
+    assert result.accepted == {"a": "Shopping", "b": "Dining"}
+    assert result.failures == {} and result.error is None
+
+
+@pytest.mark.parametrize("bad_item", [
+    None, [], "a", 5,
+    {"id": [], "category": "Shopping"},
+    {"id": {}, "category": "Shopping"},
+    {"id": 123, "category": "Shopping"},
+    {"id": None, "category": "Shopping"},
+    {"category": "Shopping"},
+    {"id": "b", "category": 5},
+    {"id": "b"},
+])
+def test_malformed_item_is_counted_and_its_row_goes_missing(bad_item):
+    result = check([{"id": "a", "category": "Shopping"}, bad_item])
+    assert result.accepted == {"a": "Shopping"}
+    assert result.failures == {"b": "llm_missing"}
+    assert result.counts["invalid_items"] == 1
+
+
+def test_duplicate_same_category_accepted_once_and_counted():
+    result = check([{"id": "a", "category": "Shopping"}, {"id": "a", "category": "Shopping"},
+                    {"id": "b", "category": "Other"}])
+    assert result.accepted == {"a": "Shopping", "b": "Other"}
+    assert result.counts["duplicate_ids"] == 1
+
+
+@pytest.mark.parametrize("second", ["Dining", "Travel"])  # Q8: valid + invalid is a conflict too
+def test_duplicate_conflicting_categories(second):
+    result = check([{"id": "a", "category": "Shopping"}, {"id": "a", "category": second},
+                    {"id": "b", "category": "Other"}])
+    assert result.failures == {"a": "llm_conflict"}
+    assert result.accepted == {"b": "Other"}
+
+
+def test_missing_id():
+    result = check([{"id": "a", "category": "Shopping"}])
+    assert result.failures == {"b": "llm_missing"}
+
+
+def test_unknown_id_is_ignored_and_counted():
+    result = check([{"id": "a", "category": "Shopping"}, {"id": "b", "category": "Other"},
+                    {"id": "zzz", "category": "Other"}])
+    assert result.accepted == {"a": "Shopping", "b": "Other"}
+    assert result.counts["unknown_ids"] == 1
+
+
+def test_invented_category():
+    result = check([{"id": "a", "category": "Travel"}, {"id": "b", "category": "Other"}])
+    assert result.failures == {"a": "llm_invalid_category"}
+
+
+def test_debit_categorized_as_income_is_a_direction_mismatch():
+    result = check([{"id": "a", "category": "Income"}, {"id": "b", "category": "Other"}])
+    assert result.failures == {"a": "category_direction_mismatch"}
