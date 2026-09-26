@@ -7,8 +7,6 @@ import json
 import os
 import re
 
-import pytest
-
 import phase3_categorized as cat_mod
 from afw.llm_input import prompt_line
 from afw.models import Category
@@ -73,11 +71,12 @@ def test_response_reduced_to_id_and_category(tmp_path, monkeypatch):
     assert written == {"categorized": [{"id": "a", "category": "Shopping"}]}
 
 
-def test_response_without_categorized_list_fails_loudly(tmp_path, monkeypatch):
+def test_response_without_categorized_list_is_recorded_not_raised(tmp_path, monkeypatch):
     write_ingested(tmp_path, [ok_row("a")])
     monkeypatch.setattr(cat_mod, "call_model", lambda prompt: json.dumps({"items": []}))
-    with pytest.raises(ValueError, match="categorized"):
-        cat_mod.main(outputs_dir=str(tmp_path))
+    cat_mod.main(outputs_dir=str(tmp_path))
+    written = json.loads((tmp_path / "categorized.json").read_text())
+    assert written == {"categorized": [], "error": "reply has no 'categorized' list"}
 
 
 def test_no_ok_rows_means_no_model_call(tmp_path, monkeypatch):

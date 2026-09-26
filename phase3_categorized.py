@@ -12,9 +12,10 @@ and validates each category against the Category enum.
 import json
 import os
 
+from afw.guards.output_validation import extract_json
 from afw.llm_input import load_ok_rows, prompt_line
 from afw.models import Category
-from bedrock_client import call_model, clean_json_text, parse_json_response
+from bedrock_client import call_model
 
 ROWS_START = "<transactions>"
 ROWS_END = "</transactions>"
@@ -63,17 +64,21 @@ exactly one entry per input id, copying each id exactly:
 
 def main(outputs_dir="outputs"):
     rows = load_ok_rows(outputs_dir)
-    categorized = []
+    categorized, error = [], None
     if rows:
-        response = parse_json_response(clean_json_text(call_model(build_prompt(rows))))
-        if not isinstance(response, dict) or not isinstance(response.get("categorized"), list):
-            raise ValueError("categorizer response has no 'categorized' list")
-        # Keep only id and category: nothing else from the model is ever used.
-        categorized = [{"id": c.get("id"), "category": c.get("category")} for c in response["categorized"]]
-    print(f"Categorized: {len(categorized)}/{len(rows)} transactions")
+        response, error = extract_json(call_model(build_prompt(rows)))
+        if response is not None and not isinstance(response.get("categorized"), list):
+            error = "reply has no 'categorized' list"
+        if not error:
+            # Keep only id and category: nothing else from the model is ever used.
+            categorized = [{"id": c.get("id"), "category": c.get("category")} for c in response["categorized"]]
+    print(f"Categorized: {len(categorized)}/{len(rows)} transactions" + (f" ({error})" if error else ""))
 
+    # An unusable reply is recorded, not raised: the KPI join then marks every
+    # row join_missing (NEEDS_REVIEW), so nothing crashes and nothing is dropped.
+    result = {"categorized": categorized, **({"error": error} if error else {})}
     with open(os.path.join(outputs_dir, "categorized.json"), "w") as f:
-        json.dump({"categorized": categorized}, f, indent=2)
+        json.dump(result, f, indent=2)
 
 
 if __name__ == "__main__":

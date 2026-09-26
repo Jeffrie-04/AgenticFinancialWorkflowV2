@@ -8,8 +8,9 @@ OUTPUT: outputs/plan.json
 import json
 import os
 
+from afw.guards.output_validation import extract_json
 from afw.llm_input import load_ok_rows, prompt_line
-from bedrock_client import call_model, clean_json_text, parse_json_response
+from bedrock_client import call_model
 
 
 def main(outputs_dir="outputs"):
@@ -51,25 +52,26 @@ Return ONLY valid JSON (no markdown, no extra text):
 YOUR RESPONSE MUST START WITH {{ AND END WITH }}. Nothing else.
 """
 
-    text = call_model(prompt)
-
-    # JSON CLEANING (model sometimes adds extra text)
-    text = clean_json_text(text)
-
-    # Parse JSON
-    plan = parse_json_response(text)
-
-    # Validate structure
-    if "plan_steps" not in plan:
-        print("Warning: Response missing 'plan_steps'")
-        if isinstance(plan, list):
-            plan = {"plan_steps": plan}
-        elif "steps" in plan:
-            plan = {"plan_steps": plan["steps"]}
+    plan = parse_plan(call_model(prompt))
+    if "error" in plan:
+        print(f"Warning: plan not usable ({plan['error']}); continuing without it")
 
     # Save
     with open(os.path.join(outputs_dir, 'plan.json'), 'w') as f:
         json.dump(plan, f, indent=2)
+
+
+def parse_plan(reply):
+    """The model's reply -> {"plan_steps": [str, ...]}, or {"plan_steps": [],
+    "error": ...} when it isn't usable. The plan is informational, so a bad
+    reply is recorded and the pipeline continues; it never exits or raises."""
+    obj, error = extract_json(reply)
+    if error:
+        return {"plan_steps": [], "error": error}
+    steps = obj.get("plan_steps", obj.get("steps"))
+    if not isinstance(steps, list) or not all(isinstance(s, str) for s in steps):
+        return {"plan_steps": [], "error": "reply has no 'plan_steps' list of strings"}
+    return {"plan_steps": steps}
 
 
 if __name__ == "__main__":
