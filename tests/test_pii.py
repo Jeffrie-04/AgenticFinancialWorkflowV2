@@ -106,3 +106,20 @@ def test_fullwidth_card_number_is_masked():
 ])
 def test_unicode_email_is_masked(text, masked):
     assert mask_pii(text) == masked
+
+
+ZWSP = "\u200b"
+
+
+@pytest.mark.parametrize("card", [
+    ZWSP.join(["4111", "1111", "1111", "1111"]),
+    f"4111 {ZWSP}1111 1111{ZWSP} 1111",
+    ZWSP.join("4111111111111111"),  # one after every digit
+])
+def test_card_split_by_zero_width_space_is_masked(card):
+    assert mask_pii(f"Card {card} charged") == "Card ****1111 charged"
+
+
+def test_zero_width_characters_are_stripped():
+    # zero-width space, non-joiner, joiner (u200b-u200d), word joiner (u2060), BOM (ufeff)
+    assert mask_pii("a\u200bb\u200cc\u200dd\u2060e\ufefff") == "abcdef"

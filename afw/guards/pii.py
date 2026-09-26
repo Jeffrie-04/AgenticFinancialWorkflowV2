@@ -6,9 +6,10 @@ sent to the summary and reflection prompts), never to amounts, dates or ids.
 Person names are not masked: merchants are names. Local files keep the
 original text; only prompts are masked.
 
-First, every whitespace run (including non-breaking, narrow, figure and
-ideographic spaces, tabs and newlines) collapses to one space, so a number
-can't escape a pattern by being split with unusual spacing.
+First, zero-width characters (\u200b-\u200d, \u2060, \ufeff) are removed and
+every whitespace run (including non-breaking, narrow, figure and ideographic
+spaces, tabs and newlines) collapses to one space, so a number can't escape a
+pattern by being split with invisible characters or unusual spacing.
 
 Masks, in order:
 - emails, any script (anything@anything.tld; over-masking is fine) -> [EMAIL]
@@ -23,6 +24,7 @@ that over-masking is accepted.
 """
 import re
 
+ZERO_WIDTH = re.compile("[\u200b-\u200d\u2060\ufeff]")
 WHITESPACE_RUN = re.compile(r"\s+")
 EMAIL = re.compile(r"[^\s@]+@[^\s@]+\.[^\s@]+")
 PHONE = re.compile(r"(?<![\d+])(?:\+1[ .-]?)?(?:\(\d{3}\) ?|\d{3}[ .-])\d{3}[ .-]\d{4}(?!\d)")
@@ -40,6 +42,7 @@ def _last_four(match):
 
 
 def mask_pii(text):
+    text = ZERO_WIDTH.sub("", text)
     text = WHITESPACE_RUN.sub(" ", text)
     text = EMAIL.sub("[EMAIL]", text)
     text = PHONE.sub("[PHONE]", text)
