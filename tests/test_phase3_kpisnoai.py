@@ -12,10 +12,18 @@ runs, and don't touch the user's real outputs/ files.
 The expected numbers for the frozen fixture were independently computed
 with pandas groupby/sum (a different code path than the module under
 test) so this isn't just re-deriving the same formulas twice — see the
-values in FullFixtureExpected.
+values in FullFixtureExpected. The KPI functions now split on `direction`
+rather than sign; directed() converts the legacy signed rows, and every
+expected number is unchanged.
+
+The join/refund tests at the bottom build ingested.json rows (the output
+of afw/ingest.py) and categorized.json rows (LLM output) directly.
 """
+import itertools
 import json
 import os
+from datetime import date
+from typing import ClassVar
 
 import pytest
 
@@ -24,10 +32,20 @@ import phase3_kpisnoAI as kpis_mod
 FIXTURE_PATH = os.path.join(os.path.dirname(__file__), "fixtures", "categorized_sample.json")
 
 
+def directed(transactions):
+    """Legacy signed rows -> KPI input rows: negative = CREDIT, positive =
+    DEBIT, amount made positive (what ingest produces)."""
+    out = []
+    for t in transactions:
+        amount = float(t["amount"])
+        out.append({**t, "direction": "CREDIT" if amount < 0 else "DEBIT", "amount": abs(amount)})
+    return out
+
+
 @pytest.fixture
 def full_fixture():
     with open(FIXTURE_PATH) as f:
-        return json.load(f)["categorized"]
+        return directed(json.load(f)["categorized"])
 
 
 # Independently computed (via pandas) ground truth for the frozen fixture.
@@ -35,10 +53,10 @@ class FullFixtureExpected:
     total_spend = 8979.42
     total_income = 14700.0
     average_expense = 204.08
-    top_merchants = ["Square Payroll", "Best Buy", "WeWork"]
+    top_merchants: ClassVar[list[str]] = ["Square Payroll", "Best Buy", "WeWork"]
     net_cash_flow = 5720.58
     status = "surplus"
-    spend_by_category = {
+    spend_by_category: ClassVar[dict[str, dict[str, float]]] = {
         "Utilities": {"amount": 5418.76, "pct_of_spend": 60.3},
         "Shopping": {"amount": 2638.77, "pct_of_spend": 29.4},
         "Other": {"amount": 502.24, "pct_of_spend": 5.6},
@@ -75,6 +93,9 @@ class TestParseDate:
         # The actual malformed date that shows up in the frozen fixture.
         assert kpis_mod.parse_date("2024-03") is None
 
+    def test_date_objects_pass_through(self):
+        assert kpis_mod.parse_date(date(2024, 10, 1)) == date(2024, 10, 1)
+
 
 # ------------------------------------------------------------ load_transactions
 
@@ -88,21 +109,30 @@ class TestLoadTransactions:
 # -------------------------------------------------------- split_income_expense
 
 class TestSplitIncomeExpense:
-    def test_splits_purely_on_sign(self):
+    def test_splits_purely_on_direction(self):
         transactions = [
-            {"amount": -100, "category": "Shopping"},  # sign wins over category
-            {"amount": 50, "category": "Income"},
-            {"amount": -1, "category": "Other"},
+            {"amount": 100, "direction": "CREDIT", "category": "Shopping"},  # direction wins over category
+            {"amount": 50, "direction": "DEBIT", "category": "Income"},
+            {"amount": 1, "direction": "CREDIT", "category": "Other"},
         ]
         income, expense = kpis_mod.split_income_expense(transactions)
         assert income == [transactions[0], transactions[2]]
         assert expense == [transactions[1]]
 
-    def test_string_amounts_are_coerced(self):
-        transactions = [{"amount": "-5.0"}, {"amount": "5.0"}]
+    def test_refunds_are_neither_income_nor_expense(self):
+        transactions = [
+            {"amount": 50, "direction": "CREDIT", "is_refund": True},
+            {"amount": 10, "direction": "CREDIT", "is_refund": False},
+        ]
         income, expense = kpis_mod.split_income_expense(transactions)
-        assert len(income) == 1
-        assert len(expense) == 1
+        assert income == [transactions[1]]
+        assert expense == []
+
+    def test_string_amounts_are_coerced(self):
+        transactions = [{"merchant": "A", "amount": "5.00", "direction": "CREDIT"},
+                        {"merchant": "B", "amount": "5.00", "direction": "DEBIT"}]
+        result = kpis_mod.compute_core_kpis(transactions)
+        assert (result["total_income"], result["total_spend"]) == (5.0, 5.0)
 
 
 # ----------------------------------------------------------- compute_core_kpis
@@ -116,17 +146,17 @@ class TestComputeCoreKpis:
         assert result["top_merchants"] == FullFixtureExpected.top_merchants
 
     def test_top_merchants_ranks_by_summed_spend_not_transaction_count(self):
-        transactions = [
+        transactions = directed([
             {"merchant": "A", "amount": 10},
             {"merchant": "A", "amount": 10},
             {"merchant": "A", "amount": 10},  # A totals 30 across 3 small txns
             {"merchant": "B", "amount": 40},  # B totals 40 in a single txn
-        ]
+        ])
         result = kpis_mod.compute_core_kpis(transactions)
         assert result["top_merchants"][0] == "B"
 
     def test_no_expenses_gives_zero_average_and_empty_merchants(self):
-        transactions = [{"merchant": "X", "amount": -100}]
+        transactions = directed([{"merchant": "X", "amount": -100}])
         result = kpis_mod.compute_core_kpis(transactions)
         assert result["total_spend"] == 0
         assert result["average_expense"] == 0.0
@@ -142,13 +172,13 @@ class TestComputeNetCashFlow:
         assert result["status"] == FullFixtureExpected.status
 
     def test_deficit_when_spend_exceeds_income(self):
-        transactions = [{"amount": -10}, {"amount": 100}]
+        transactions = directed([{"amount": -10}, {"amount": 100}])
         result = kpis_mod.compute_net_cash_flow(transactions)
         assert result["net_cash_flow"] == -90.0
         assert result["status"] == "deficit"
 
     def test_zero_net_counts_as_surplus(self):
-        transactions = [{"amount": -50}, {"amount": 50}]
+        transactions = directed([{"amount": -50}, {"amount": 50}])
         result = kpis_mod.compute_net_cash_flow(transactions)
         assert result["net_cash_flow"] == 0.0
         assert result["status"] == "surplus"
@@ -167,7 +197,7 @@ class TestComputeSpendByCategory:
         assert abs(pct_sum - 100) <= 1.0
 
     def test_no_expenses_returns_empty_dict_without_dividing_by_zero(self):
-        transactions = [{"amount": -100, "category": "Income"}]
+        transactions = directed([{"amount": -100, "category": "Income"}])
         result = kpis_mod.compute_spend_by_category(transactions)
         assert result == {}
 
@@ -183,7 +213,7 @@ class TestComputeIncomeConcentration:
         assert result["num_income_sources"] == FullFixtureExpected.num_income_sources
 
     def test_no_income_returns_safe_defaults(self):
-        transactions = [{"merchant": "A", "amount": 100}]
+        transactions = directed([{"merchant": "A", "amount": 100}])
         result = kpis_mod.compute_income_concentration(transactions)
         assert result == {
             "top_client": None,
@@ -207,10 +237,10 @@ class TestComputeFixedVsDiscretionary:
         assert round(result["fixed_spend"] + result["discretionary_spend"], 2) == FullFixtureExpected.total_spend
 
     def test_all_discretionary_categories_gives_zero_fixed(self):
-        transactions = [
+        transactions = directed([
             {"amount": 50, "category": "Dining"},
             {"amount": 25, "category": "Shopping"},
-        ]
+        ])
         result = kpis_mod.compute_fixed_vs_discretionary(transactions)
         assert result["fixed_spend"] == 0
         assert result["fixed_pct"] == 0.0
@@ -227,19 +257,19 @@ class TestComputeBurnRate:
         assert result["unparseable_dates"] == FullFixtureExpected.unparseable_dates
 
     def test_single_day_of_transactions_falls_back_to_one_day(self):
-        transactions = [
+        transactions = directed([
             {"amount": 100, "date": "10-01-2024"},
             {"amount": 50, "date": "10-01-2024"},
-        ]
+        ])
         result = kpis_mod.compute_burn_rate(transactions)
         assert result["period_days"] == 1
         assert result["daily_avg_spend"] == 150.0
 
     def test_fewer_than_two_valid_dates_falls_back_to_one_day(self):
-        transactions = [
+        transactions = directed([
             {"amount": 100, "date": "not-a-date"},
             {"amount": 50, "date": "also-bad"},
-        ]
+        ])
         result = kpis_mod.compute_burn_rate(transactions)
         assert result["period_days"] == 1
         assert result["unparseable_dates"] == 2
@@ -255,9 +285,14 @@ class TestValidate:
         full_kpis["spend_by_category"] = kpis_mod.compute_spend_by_category(full_fixture)
         kpis_mod.validate(full_kpis, full_fixture)  # should not raise
 
-    def test_raises_on_nonpositive_total_spend(self):
+    def test_raises_on_negative_total_spend(self):
         with pytest.raises(ValueError, match="total_spend"):
-            kpis_mod.validate({"total_spend": 0, "spend_by_category": {}}, [])
+            kpis_mod.validate({"total_spend": -1, "spend_by_category": {}}, [])
+
+    def test_zero_spend_is_valid(self):
+        kpis_mod.validate({"total_spend": 0, "spend_by_category": {}}, [])
+        kpis_mod.validate({"total_spend": 0,
+                           "spend_by_category": {"Shopping": {"amount": 0.0, "pct_of_spend": 0.0}}}, [])
 
     def test_raises_when_category_percentages_dont_sum_to_100(self):
         bad_kpis = {
@@ -270,18 +305,350 @@ class TestValidate:
             kpis_mod.validate(bad_kpis, [])
 
 
+# ============================================ exact math, deterministic ranks
+
+def row(merchant, amount, direction, **extra):
+    return {"merchant": merchant, "amount": amount, "direction": direction, **extra}
+
+
+def numeric_leaves(value):
+    if isinstance(value, dict):
+        for v in value.values():
+            yield from numeric_leaves(v)
+    elif isinstance(value, list):
+        for v in value:
+            yield from numeric_leaves(v)
+    elif not isinstance(value, (str, bool)) and value is not None:
+        yield value
+
+
+class TestExactMath:
+    @pytest.mark.parametrize("transactions", [
+        # 0.10 + 0.20 in, 0.30 out
+        [row("A", "0.10", "CREDIT"), row("B", "0.20", "CREDIT"), row("C", "0.30", "DEBIT")],
+        # 0.30 in, 0.10 + 0.20 out: float gives net -5.5e-17 -> "deficit"
+        [row("A", "0.30", "CREDIT"), row("B", "0.10", "DEBIT"), row("C", "0.20", "DEBIT")],
+        # Same with float amounts (legacy rows): must convert via repr, since
+        # Decimal(0.3) - Decimal(0.1) - Decimal(0.2) is -2.8e-17.
+        [row("A", 0.1, "CREDIT"), row("B", 0.2, "CREDIT"), row("C", 0.3, "DEBIT")],
+        [row("A", 0.3, "CREDIT"), row("B", 0.1, "DEBIT"), row("C", 0.2, "DEBIT")],
+    ])
+    def test_status_decided_from_exact_net(self, transactions):
+        result = kpis_mod.compute_net_cash_flow(transactions)
+        assert result == {"net_cash_flow": 0.0, "status": "surplus"}
+
+    @pytest.mark.parametrize("refunds", [("0.10", "0.20", "0.30"), ("0.30", "0.20", "0.10")])
+    def test_refunds_accumulate_exactly_in_any_order(self, refunds):
+        transactions = [row("Shop", "0.60", "DEBIT", id="d", category="Shopping")] + [
+            row("Shop", amt, "CREDIT", id=f"r{i}", is_refund=True, refund_of="d")
+            for i, amt in enumerate(refunds)]
+        netted = kpis_mod.apply_refunds(transactions)
+        assert netted[0]["amount"] == 0  # exactly, not 1e-16 off
+        assert kpis_mod.compute_core_kpis(netted)["total_spend"] == 0.0
+
+    def test_rounding_is_half_up(self):
+        # average of $0.02 and $0.03 is exactly $0.025: half-up -> 0.03, half-even -> 0.02
+        transactions = [row("A", "0.02", "DEBIT"), row("B", "0.03", "DEBIT")]
+        assert kpis_mod.compute_core_kpis(transactions)["average_expense"] == 0.03
+
+    def test_pct_rounds_half_up(self):
+        # $1 of $2,000 is exactly 0.05%: half-up -> 0.1, half-even -> 0.0
+        transactions = [row("A", "1.00", "DEBIT", category="Dining"),
+                        row("B", "1999.00", "DEBIT", category="Utilities")]
+        assert kpis_mod.compute_spend_by_category(transactions)["Dining"]["pct_of_spend"] == 0.1
+
+    def test_kpi_output_is_plain_numbers(self, tmp_path):
+        kpis, _ = run_main(tmp_path, [RENT[0], ing("c", "Client", "0.10", "CREDIT")],
+                           [RENT[1], cat("c", "Income")])
+        leaves = list(numeric_leaves(kpis))
+        assert leaves and all(type(v) in (int, float) for v in leaves)
+
+
+FOUR_TIED = [row(m, "1.00", "DEBIT", category="Other") for m in ("Delta", "Charlie", "Bravo", "Alpha")]
+
+
+class TestDeterministicRanking:
+    @pytest.mark.parametrize("order", [FOUR_TIED, FOUR_TIED[::-1]])
+    def test_top_merchant_ties_broken_by_name(self, order):
+        assert kpis_mod.compute_core_kpis(order)["top_merchants"] == ["Alpha", "Bravo", "Charlie"]
+
+    @pytest.mark.parametrize("order", [["Zed", "Amy"], ["Amy", "Zed"]])
+    def test_top_client_ties_broken_by_name(self, order):
+        transactions = [row(m, "500.00", "CREDIT") for m in order]
+        assert kpis_mod.compute_income_concentration(transactions)["top_client"] == "Amy"
+
+
+# ================================================ join with ingested.json
+
+def ing(row_id, merchant, amount, direction, day="2024-10-03", status="OK", reason=None,
+        is_refund=False, refund_of=None):
+    """One row as afw/ingest.py writes it to ingested.json."""
+    usable = status != "REJECTED"
+    return {
+        "id": row_id, "source_file": "t.csv", "source_row": 2, "account_id": "default",
+        "date": day if usable else None, "amount": amount if usable else None,
+        "direction": direction if usable else None, "merchant": merchant, "description": "",
+        "currency": "USD", "is_transfer": False, "is_refund": is_refund, "refund_of": refund_of,
+        "status": status, "reason": reason,
+    }
+
+
+def cat(row_id, category, **extra):
+    """One entry as the LLM categorizer writes it to categorized.json."""
+    return {"id": row_id, "category": category, **extra}
+
+
+def run_main(tmp_path, ingested, categorized):
+    (tmp_path / "ingested.json").write_text(json.dumps({"source_file": "t.csv", "transactions": ingested}))
+    (tmp_path / "categorized.json").write_text(json.dumps({"categorized": categorized}))
+    kpis = kpis_mod.main(outputs_dir=str(tmp_path))
+    dq = json.loads((tmp_path / "data_quality.json").read_text())
+    return kpis, dq["kpi_join"]
+
+
+RENT = (ing("rent", "Landlord", "1000.00", "DEBIT"), cat("rent", "Utilities"))
+
+# $100 purchase, refunded $20 then $30 on later days -> $50 net spend.
+REFUND_20_30 = [
+    ing("d", "Shop", "100.00", "DEBIT", day="2024-10-01"),
+    ing("r1", "Shop", "20.00", "CREDIT", day="2024-10-02", is_refund=True, refund_of="d"),
+    ing("r2", "Shop", "30.00", "CREDIT", day="2024-10-03", is_refund=True, refund_of="d"),
+]
+REFUND_20_30_LLM = [cat("d", "Shopping"), cat("r1", "Income"), cat("r2", "Income")]
+
+
+class TestJoinCategories:
+    def test_category_joined_by_id(self):
+        rows, report, _ = kpis_mod.join_categories([ing("a", "Shop", "10.00", "DEBIT")], [cat("a", "Shopping")])
+        assert [(r["id"], r["category"]) for r in rows] == [("a", "Shopping")]
+        assert report["rows_in_kpis"] == 1
+
+    def test_only_category_is_read_from_llm(self):
+        # Anything else the model echoes back is ignored; money comes from the source.
+        rows, _, _ = kpis_mod.join_categories(
+            [ing("a", "Home Depot", "10.00", "DEBIT")],
+            [cat("a", "Shopping", merchant="Evil Corp", amount=999999, direction="CREDIT")])
+        assert (rows[0]["merchant"], rows[0]["amount"], rows[0]["direction"]) == ("Home Depot", "10.00", "DEBIT")
+
+    def test_identical_source_rows_join_independently_by_id(self):
+        rows, report, _ = kpis_mod.join_categories(
+            [ing("a", "Starbucks", "4.50", "DEBIT"), ing("b", "Starbucks", "4.50", "DEBIT")],
+            [cat("a", "Dining"), cat("b", "Dining")])
+        assert [r["id"] for r in rows] == ["a", "b"]
+        assert report["join_ambiguous"] == 0
+
+    def test_missing_id_is_join_missing(self):
+        rows, report, _ = kpis_mod.join_categories([ing("a", "Shop", "10.00", "DEBIT")], [])
+        assert rows == []
+        assert report["join_missing"] == 1
+        assert report["excluded_total"] == {"debit": "10.00", "credit": "0.00", "rows": 1}
+
+    def test_unknown_id_is_ignored_and_counted(self):
+        rows, report, _ = kpis_mod.join_categories(
+            [ing("a", "Shop", "10.00", "DEBIT")],
+            [cat("a", "Shopping"), cat("ghost", "Shopping"), {"category": "Other"}])
+        assert [r["id"] for r in rows] == ["a"]
+        assert report["categorized_unknown_id"] == 2  # an invented id, and no id at all
+
+    def test_ids_of_rows_never_sent_count_as_unknown(self):
+        # REJECTED and NEEDS_REVIEW rows never reach the model, so their ids
+        # coming back are unknown; the rows themselves stay out of the KPIs.
+        rows, report, _ = kpis_mod.join_categories(
+            [ing("a", "Shop", "10.00", "DEBIT"),
+             ing("r", "Verizon", None, None, status="REJECTED", reason="amount_zero"),
+             ing("n", "", "55.00", "DEBIT", status="NEEDS_REVIEW", reason="merchant_blank")],
+            [cat("a", "Shopping"), cat("r", "Utilities"), cat("n", "Other")])
+        assert [r["id"] for r in rows] == ["a"]
+        assert report["categorized_unknown_id"] == 2
+        assert report["join_missing"] == report["join_ambiguous"] == 0
+
+    def test_invalid_category_is_needs_review(self):
+        rows, report, _ = kpis_mod.join_categories([ing("a", "Shop", "10.00", "DEBIT")], [cat("a", "Groceries")])
+        assert rows == []
+        assert report["category_invalid"] == 1
+
+    def test_same_id_conflicting_categories_is_ambiguous(self):
+        rows, report, _ = kpis_mod.join_categories(
+            [ing("a", "Shop", "10.00", "DEBIT")], [cat("a", "Shopping"), cat("a", "Other")])
+        assert rows == []
+        assert report["join_ambiguous"] == 1
+
+    def test_same_id_repeated_with_same_category_counts_once(self):
+        rows, report, _ = kpis_mod.join_categories(
+            [ing("a", "Shop", "10.00", "DEBIT")], [cat("a", "Shopping"), cat("a", "Shopping")])
+        assert [r["id"] for r in rows] == ["a"]
+        assert report["join_ambiguous"] == 0
+
+    def test_refund_of_excluded_debit_is_needs_review(self):
+        rows, report, _ = kpis_mod.join_categories(
+            [ing("d", "Home Depot", "200.00", "DEBIT"),  # no category -> excluded
+             ing("r", "Home Depot", "50.00", "CREDIT", day="2024-10-05", is_refund=True, refund_of="d")],
+            [cat("r", "Income")])
+        assert rows == []
+        assert report["join_missing"] == 1
+        assert report["refund_original_excluded"] == 1
+        assert report["excluded_total"] == {"debit": "200.00", "credit": "50.00", "rows": 2}
+
+
+def read_transactions(outputs_dir):
+    with open(os.path.join(outputs_dir, "transactions.json")) as f:
+        return {t["id"]: t for t in json.load(f)["transactions"]}
+
+
+class TestTransactionsFile:
+    """outputs/transactions.json: every ingested row with its final category,
+    status and reason after the join. The dashboard's only per-row source."""
+
+    def test_every_ingested_row_with_final_status_reason_and_category(self, tmp_path):
+        ingested = [
+            RENT[0],
+            ing("r", "Verizon", None, None, status="REJECTED", reason="amount_zero"),
+            ing("n", "", "55.00", "DEBIT", status="NEEDS_REVIEW", reason="merchant_blank"),
+            ing("m", "Shop", "10.00", "DEBIT"),
+            ing("x", "Shop", "20.00", "DEBIT"),
+            ing("d", "Home Depot", "200.00", "DEBIT"),
+            ing("rf", "Home Depot", "50.00", "CREDIT", is_refund=True, refund_of="d"),
+            ing("q", "Store", "5.00", "DEBIT"),
+            ing("rq", "Store", "5.00", "CREDIT", is_refund=True, refund_of="q"),
+        ]
+        run_main(tmp_path, ingested, [RENT[1], cat("m", "Groceries"), cat("d", "Shopping"), cat("rf", "Income")])
+
+        rows = read_transactions(tmp_path)
+        assert list(rows) == [t["id"] for t in ingested]  # every row, source order
+        assert {i: (t["status"], t["reason"], t["category"]) for i, t in rows.items()} == {
+            "rent": ("OK", None, "Utilities"),
+            "r": ("REJECTED", "amount_zero", None),
+            "n": ("NEEDS_REVIEW", "merchant_blank", None),
+            "m": ("NEEDS_REVIEW", "category_invalid", None),
+            "x": ("NEEDS_REVIEW", "join_missing", None),
+            "d": ("OK", None, "Shopping"),
+            "rf": ("OK", None, "Shopping"),  # a refund carries its original DEBIT's category
+            "q": ("NEEDS_REVIEW", "join_missing", None),
+            "rq": ("NEEDS_REVIEW", "refund_original_excluded", None),
+        }
+        assert (rows["d"]["date"], rows["d"]["amount"], rows["d"]["merchant"]) == ("2024-10-03", "200.00", "Home Depot")
+
+    @pytest.mark.parametrize("reply", [[cat("a", "Shopping"), cat("a", "Dining")],
+                                       [cat("a", "Dining"), cat("a", "Shopping")]])
+    def test_codex_conflicting_categories_same_result_in_either_order(self, tmp_path, reply):
+        kpis, report = run_main(tmp_path, [RENT[0], ing("a", "Shop", "10.00", "DEBIT")], [RENT[1], *reply])
+        a = read_transactions(tmp_path)["a"]
+        assert (a["status"], a["reason"], a["category"]) == ("NEEDS_REVIEW", "join_ambiguous", None)
+        assert report["join_ambiguous"] == 1
+        assert kpis["total_spend"] == 1000.0  # the ambiguous row is not in the KPIs
+
+
+class TestRefundNetting:
+    def test_refund_nets_against_original_debit_category(self, tmp_path):
+        kpis, _ = run_main(tmp_path, [
+            RENT[0],
+            ing("d", "Home Depot", "200.00", "DEBIT"),
+            ing("r", "Home Depot", "50.00", "CREDIT", is_refund=True, refund_of="d"),
+        ], [RENT[1], cat("d", "Shopping"), cat("r", "Income")])
+        assert kpis["total_spend"] == 1150.0
+        assert kpis["total_income"] == 0.0
+        assert kpis["spend_by_category"]["Shopping"]["amount"] == 150.0  # the DEBIT's category
+        assert "Income" not in kpis["spend_by_category"]
+        assert kpis["average_expense"] == 575.0  # net spend / 2 DEBIT rows
+
+    def test_refund_needs_no_category_of_its_own(self, tmp_path):
+        kpis, report = run_main(tmp_path, [
+            RENT[0],
+            ing("d", "Home Depot", "200.00", "DEBIT"),
+            ing("r", "Home Depot", "50.00", "CREDIT", is_refund=True, refund_of="d"),
+        ], [RENT[1], cat("d", "Shopping")])
+        assert kpis["total_spend"] == 1150.0
+        assert report["join_missing"] == 0
+
+    def test_same_day_full_refund_nets_to_zero(self, tmp_path):
+        kpis, report = run_main(tmp_path, [
+            ing("d", "Shop", "100.00", "DEBIT"),
+            ing("r", "Shop", "100.00", "CREDIT", is_refund=True, refund_of="d"),
+        ], [cat("d", "Shopping"), cat("r", "Income")])
+        assert report["join_ambiguous"] == 0
+        assert (kpis["total_spend"], kpis["total_income"]) == (0.0, 0.0)
+        assert kpis["spend_by_category"] == {"Shopping": {"amount": 0.0, "pct_of_spend": 0.0}}
+
+    def test_partial_refunds_net_to_remaining_spend(self, tmp_path):
+        kpis, _ = run_main(tmp_path, REFUND_20_30, REFUND_20_30_LLM)
+        assert (kpis["total_spend"], kpis["total_income"]) == (50.0, 0.0)
+
+    def test_full_refund_on_a_later_day_nets_to_zero(self, tmp_path):
+        kpis, _ = run_main(tmp_path, [
+            ing("d", "Shop", "100.00", "DEBIT", day="2024-10-01"),
+            ing("r", "Shop", "100.00", "CREDIT", day="2024-10-09", is_refund=True, refund_of="d"),
+        ], [cat("d", "Shopping")])
+        assert (kpis["total_spend"], kpis["total_income"]) == (0.0, 0.0)
+
+    def test_refund_order_does_not_change_kpis(self, tmp_path):
+        results = []
+        for order in itertools.permutations(REFUND_20_30):
+            out = tmp_path / str(len(results))
+            out.mkdir()
+            results.append(run_main(out, list(order), REFUND_20_30_LLM)[0])
+        assert all(r == results[0] for r in results)
+        assert results[0]["total_spend"] == 50.0
+
+
+class TestCodexAcceptance:
+    def test_rejected_row_and_unknown_llm_id_contribute_zero(self, tmp_path):
+        baseline, _ = run_main(tmp_path, [RENT[0]], [RENT[1]])
+        kpis, report = run_main(tmp_path, [
+            RENT[0],
+            ing("r", "Verizon", None, None, status="REJECTED", reason="amount_unparseable"),
+        ], [RENT[1], cat("r", "Utilities"), cat("ghost", "Income")])
+        assert kpis == baseline
+        assert report["categorized_unknown_id"] == 2
+
+    def test_100_debit_plus_50_refund(self, tmp_path):
+        kpis, _ = run_main(tmp_path, [
+            ing("d", "Shop", "100.00", "DEBIT", day="2024-10-01"),
+            ing("r", "Shop", "50.00", "CREDIT", day="2024-10-02", is_refund=True, refund_of="d"),
+        ], [cat("d", "Shopping"), cat("r", "Income")])
+        assert (kpis["total_spend"], kpis["total_income"]) == (50.0, 0.0)
+
+    def test_credit_repeated_in_categorized_counts_once(self, tmp_path):
+        kpis, _ = run_main(tmp_path, [RENT[0], ing("c", "Client", "500.00", "CREDIT")],
+                           [RENT[1], cat("c", "Income"), cat("c", "Income")])
+        assert kpis["total_income"] == 500.0
+
+
 # ------------------------------------------------------ end-to-end (main())
 
 class TestMainEndToEnd:
-    def test_main_writes_valid_kpis_json_for_the_real_csv_derived_fixture(self, tmp_path, monkeypatch, full_fixture):
-        outputs_dir = tmp_path / "outputs"
-        outputs_dir.mkdir()
-        (outputs_dir / "categorized.json").write_text(json.dumps({"categorized": full_fixture}))
+    def test_main_writes_kpis_and_join_report(self, tmp_path):
+        (tmp_path / "data_quality.json").write_text(json.dumps({"counts": {"rows": 2}}))
+        kpis, report = run_main(tmp_path, [RENT[0], ing("c", "Client", "500.00", "CREDIT")],
+                                [RENT[1], cat("c", "Income")])
 
-        monkeypatch.chdir(tmp_path)
-        returned_kpis = kpis_mod.main()
+        written = json.loads((tmp_path / "kpis.json").read_text())
+        assert written["kpis"] == kpis
+        assert kpis["net_cash_flow"] == -500.0
+        assert report["rows_in_kpis"] == 2
+        # ingest's own section of data_quality.json is preserved
+        dq = json.loads((tmp_path / "data_quality.json").read_text())
+        assert dq["counts"] == {"rows": 2}
 
-        written = json.loads((outputs_dir / "kpis.json").read_text())
-        assert written["kpis"] == returned_kpis
-        assert written["kpis"]["total_spend"] == FullFixtureExpected.total_spend
-        assert written["kpis"]["burn_rate"]["unparseable_dates"] == FullFixtureExpected.unparseable_dates
+    def test_every_row_excluded_gives_zero_kpis_not_an_error(self, tmp_path):
+        kpis, report = run_main(tmp_path, [ing("a", "Shop", "10.00", "DEBIT")], [])
+        assert report["rows_in_kpis"] == 0
+        assert report["join_missing"] == 1
+        assert (kpis["total_spend"], kpis["total_income"], kpis["net_cash_flow"]) == (0.0, 0.0, 0.0)
+        assert kpis["spend_by_category"] == {}
+        assert kpis["top_merchants"] == []
+
+    def test_data_quality_written_even_if_kpi_validation_fails(self, tmp_path, monkeypatch):
+        def boom(kpis, transactions):
+            raise ValueError("validation failed")
+        monkeypatch.setattr(kpis_mod, "validate", boom)
+        with pytest.raises(ValueError, match="validation failed"):
+            run_main(tmp_path, [RENT[0]], [RENT[1]])
+        dq = json.loads((tmp_path / "data_quality.json").read_text())
+        assert dq["kpi_join"]["rows_in_kpis"] == 1
+        assert read_transactions(tmp_path)["rent"]["status"] == "OK"
+        assert not (tmp_path / "kpis.json").exists()
+
+    def test_main_fails_without_ingested_json(self, tmp_path):
+        (tmp_path / "categorized.json").write_text(json.dumps({"categorized": [RENT[1]]}))
+        with pytest.raises(FileNotFoundError):
+            kpis_mod.main(outputs_dir=str(tmp_path))

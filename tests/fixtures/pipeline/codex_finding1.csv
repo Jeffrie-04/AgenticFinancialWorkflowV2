@@ -1,0 +1,11 @@
+date,merchant,amount,description
+10-01-2024,Oakwood HOA,-6500.00,Monthly grounds contract
+10-02-2024,Shell Gas,420.50,Fleet fuel
+10-03-2024,SiteOne Supply,1180.00,Mulch and pavers
+10-04-2024,Riverside Apartments,-4200.00,Monthly maintenance contract
+10-05-2024,Gusto Payroll,8940.00,Crew payroll
+10-06-2024,Verizon,180.00,Phone plan
+10-07-2024,Toro Dealer,2250.00,Mower repair
+10-08-2024,Chipotle,64.20,Crew lunch
+10-09-2024,Mystery Vendor,abc,REJECTED_MARKER
+10-10-2024,,55.00,REVIEW_MARKER

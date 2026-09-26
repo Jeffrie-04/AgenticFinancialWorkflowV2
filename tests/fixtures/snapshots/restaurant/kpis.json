@@ -1,0 +1,50 @@
+{
+  "kpis": {
+    "total_spend": 62159.5,
+    "total_income": 59955.45,
+    "top_merchants": [
+      "Gusto Payroll",
+      "Sysco Foods",
+      "Property Management LLC"
+    ],
+    "average_expense": 1828.22,
+    "net_cash_flow": -2204.05,
+    "status": "deficit",
+    "spend_by_category": {
+      "Shopping": {
+        "amount": 32316.3,
+        "pct_of_spend": 52.0
+      },
+      "Utilities": {
+        "amount": 28079.0,
+        "pct_of_spend": 45.2
+      },
+      "Other": {
+        "amount": 1639.2,
+        "pct_of_spend": 2.6
+      },
+      "Dining": {
+        "amount": 125.0,
+        "pct_of_spend": 0.2
+      }
+    },
+    "income_concentration": {
+      "top_client": "Card Batch Deposit",
+      "top_client_pct": 80.9,
+      "top3_clients_pct": 94.7,
+      "num_income_sources": 4
+    },
+    "fixed_vs_discretionary": {
+      "fixed_spend": 28079.0,
+      "discretionary_spend": 34080.5,
+      "fixed_pct": 45.2
+    },
+    "burn_rate": {
+      "period_days": 30,
+      "daily_avg_spend": 2071.98,
+      "monthly_projection": 62159.5,
+      "unparseable_dates": 0,
+      "runway_note": "Runway not computed: requires a starting cash balance."
+    }
+  }
+}

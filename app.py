@@ -55,11 +55,33 @@ def load_kpis(path):
     return data.get("kpis", {}), None
 
 
-def load_categorized(path):
+def load_list(path, key):
+    """Returns (list, error) — error is None, "missing", or "malformed" (bad
+    JSON, or no list of objects under `key`)."""
     data, error = load_json(path)
     if error:
         return None, error
-    return data.get("categorized", []), None
+    items = data.get(key) if isinstance(data, dict) else None
+    if not isinstance(items, list) or not all(isinstance(i, dict) for i in items):
+        return None, "malformed"
+    return items, None
+
+
+def build_transaction_table(transactions):
+    """Rows from transactions.json, written by the KPI stage: every ingested
+    row with its final category, status and reason — the same per-row result
+    the KPIs used. NEEDS_REVIEW and REJECTED rows are shown and flagged."""
+    df = pd.DataFrame([{
+        "status": t.get("status"),
+        "date": t.get("date"),
+        "merchant": t.get("merchant"),
+        "direction": t.get("direction"),
+        "amount": t.get("amount"),
+        "category": t.get("category"),
+        "reason": t.get("reason"),
+    } for t in transactions])
+    df["amount"] = pd.to_numeric(df["amount"], errors="coerce")  # exact strings in the file; None if REJECTED
+    return df.sort_values("date", ascending=False, na_position="last", kind="stable")
 
 
 def money(x):
@@ -82,7 +104,7 @@ with st.sidebar:
 business_dir = all_businesses[selected_label]
 OUTPUTS_DIR = os.path.join(business_dir, "outputs")
 KPIS_PATH = os.path.join(OUTPUTS_DIR, "kpis.json")
-CATEGORIZED_PATH = os.path.join(OUTPUTS_DIR, "categorized.json")
+TRANSACTIONS_PATH = os.path.join(OUTPUTS_DIR, "transactions.json")
 SUMMARY_PATH = os.path.join(OUTPUTS_DIR, "summary.txt")
 REFLECTION_PATH = os.path.join(OUTPUTS_DIR, "reflection.txt")
 
@@ -181,24 +203,26 @@ else:
 
 # ------------------------------------------------------------- transactions
 
-st.header("Categorized Transactions")
-categorized, categorized_error = load_categorized(CATEGORIZED_PATH)
-if categorized_error == "missing":
-    st.warning("categorized.json not found yet — run the pipeline to generate it.")
-elif categorized_error == "malformed":
-    st.warning("categorized.json exists but isn't valid JSON — re-run the pipeline to regenerate it.")
-elif not categorized:
+st.header("Transactions")
+transactions, transactions_error = load_list(TRANSACTIONS_PATH, "transactions")
+if transactions_error == "missing":
+    st.warning("transactions.json not found yet — run the pipeline to generate it.")
+elif transactions_error or not all("status" in t for t in transactions):
+    st.warning("transactions.json isn't in the expected format — re-run the pipeline to regenerate it.")
+elif not transactions:
     st.caption("No transactions to display.")
 else:
-    tx_df = pd.DataFrame(categorized).sort_values("date", ascending=False)
     st.dataframe(
-        tx_df,
+        build_transaction_table(transactions),
         width="stretch",
         hide_index=True,
         column_config={
             "amount": st.column_config.NumberColumn("amount", format="$%.2f"),
         },
     )
+    statuses = [t["status"] for t in transactions]
+    st.caption(f"Data quality: {statuses.count('OK')} OK · {statuses.count('NEEDS_REVIEW')} "
+               f"needs review · {statuses.count('REJECTED')} rejected")
 
 # ------------------------------------------------------------ re-run control
 

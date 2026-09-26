@@ -1,0 +1,13 @@
+date,merchant,amount,description
+10-01-2024,Home Depot,200.00,Lumber
+10-05-2024,home depot,-50.00,Store credit
+10-06-2024,Home Depot,-150.00,
+10-07-2024,Home Depot,-10.00,
+10-08-2024,Home Depot,-300.00,
+10-02-2024,Amazon,-40.00,
+10-09-2024,Amazon,40.00,Office chair
+10-10-2024,Stripe,-25.00,Refund order 123
+10-11-2024,Oakwood HOA,-6500.00,Monthly contract
+10-12-2024,Staples,-20.00,
+10-12-2024,Staples,20.00,Ink
+10-13-2024,H&R Block,-100.00,Tax return prep

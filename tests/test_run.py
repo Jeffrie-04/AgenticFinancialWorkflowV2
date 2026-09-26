@@ -1,0 +1,138 @@
+"""
+Tests for run.py — ingest runs first, and a failed ingest stops the pipeline
+before any LLM phase is called.
+
+The LLM phases (plan, categorize, summary, reflection) are replaced with
+stubs that record their calls; the categorize stub copies the frozen
+categorized.json so the real ingest and KPI stages run end to end.
+"""
+import json
+import os
+import re
+import shutil
+
+import pytest
+
+import phase2_plan
+import phase3_categorized
+import phase3_reflection
+import phase3_summary
+import run
+
+FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
+SNAPSHOT = os.path.join(FIXTURES, "snapshots", "landscaper")
+
+
+@pytest.fixture
+def llm_calls(monkeypatch):
+    calls = []
+
+    def stub(name, action=None):
+        def main(**kwargs):
+            calls.append(name)
+            if action:
+                action(**kwargs)
+        return main
+
+    def fake_categorize(outputs_dir):
+        shutil.copy(os.path.join(SNAPSHOT, "categorized.json"), os.path.join(outputs_dir, "categorized.json"))
+
+    monkeypatch.setattr(phase2_plan, "main", stub("plan"))
+    monkeypatch.setattr(phase3_categorized, "main", stub("categorize", fake_categorize))
+    monkeypatch.setattr(phase3_summary, "main", stub("summary"))
+    monkeypatch.setattr(phase3_reflection, "main", stub("reflection"))
+    return calls
+
+
+def business_dir(tmp_path, csv_source):
+    shutil.copy(csv_source, tmp_path / "transactions.csv")
+    return str(tmp_path)
+
+
+def test_ingest_runs_first():
+    assert run.PHASES[0][1].__name__ == "afw.ingest"
+
+
+def test_h1_clean_csv_runs_whole_pipeline(tmp_path, llm_calls):
+    biz = business_dir(tmp_path, os.path.join(SNAPSHOT, "transactions.csv"))
+
+    assert run.main(business_dir=biz) == 0
+
+    outputs = tmp_path / "outputs"
+    assert llm_calls == ["plan", "categorize", "summary", "reflection"]
+    ingested = json.loads((outputs / "ingested.json").read_text())
+    assert len(ingested["transactions"]) == 42
+    with open(os.path.join(SNAPSHOT, "kpis.json")) as f:
+        assert json.loads((outputs / "kpis.json").read_text()) == json.load(f)
+    dq = json.loads((outputs / "data_quality.json").read_text())
+    assert dq["counts"]["ok"] == 42
+    assert dq["kpi_join"]["rows_in_kpis"] == 42
+
+
+def test_codex_finding1_only_ok_rows_reach_any_prompt(tmp_path, monkeypatch):
+    """Real phase code end to end; only call_model is stubbed. 10 rows:
+    8 OK, 1 REJECTED (amount abc), 1 NEEDS_REVIEW (blank merchant) -> 10%
+    rejected, so ingest passes and every LLM phase actually builds a prompt."""
+    prompts = []
+
+    def fake_call_model(prompt):
+        prompts.append(prompt)
+        if phase3_categorized.ROWS_START in prompt:
+            block = prompt.split(phase3_categorized.ROWS_START, 1)[1].split(phase3_categorized.ROWS_END, 1)[0]
+            rows = [json.loads(line) for line in block.strip().splitlines()]
+            return json.dumps({"categorized": [
+                {"id": r["id"], "category": "Income" if r["direction"] == "CREDIT" else "Other"}
+                for r in rows]})
+        if "plan_steps" in prompt:
+            return json.dumps({"plan_steps": ["plan", "act", "observe", "summarize", "reflect"]})
+        return "Stub narrative."
+
+    def no_network(prompt):
+        raise AssertionError("a phase called the real model")
+
+    import bedrock_client
+    monkeypatch.setattr(bedrock_client, "call_model", no_network)
+    for module in (phase2_plan, phase3_categorized, phase3_summary, phase3_reflection):
+        monkeypatch.setattr(module, "call_model", fake_call_model)
+
+    biz = business_dir(tmp_path, os.path.join(FIXTURES, "pipeline", "codex_finding1.csv"))
+    assert run.main(business_dir=biz) == 0
+
+    outputs = tmp_path / "outputs"
+    dq = json.loads((outputs / "data_quality.json").read_text())
+    # The threshold passed, so the absence checks below are meaningful.
+    assert dq["counts"] == {"rows": 10, "ok": 8, "needs_review": 1, "rejected": 1}
+    assert (outputs / "kpis.json").exists()
+
+    ingested = json.loads((outputs / "ingested.json").read_text())["transactions"]
+    ok_ids = [t["id"] for t in ingested if t["status"] == "OK"]
+    excluded_ids = [t["id"] for t in ingested if t["status"] != "OK"]
+    assert len(ok_ids) == 8 and len(excluded_ids) == 2
+
+    assert len(prompts) == 4  # plan, categorize, summary, reflection
+    for prompt in prompts:
+        assert "REJECTED_MARKER" not in prompt
+        assert "REVIEW_MARKER" not in prompt
+        assert not re.search(r"\babc\b", prompt)  # word match: hex ids may contain "abc"
+        assert not any(i in prompt for i in excluded_ids)
+
+    # Positive control: the categorizer prompt carries every OK row.
+    categorizer_prompts = [p for p in prompts if phase3_categorized.ROWS_START in p]
+    assert len(categorizer_prompts) == 1
+    assert all(i in categorizer_prompts[0] for i in ok_ids)
+
+    categorized = json.loads((outputs / "categorized.json").read_text())["categorized"]
+    assert sorted(c["id"] for c in categorized) == sorted(ok_ids)
+    assert dq["kpi_join"]["rows_in_kpis"] == 8
+
+
+def test_h2_failed_ingest_stops_before_any_llm_call(tmp_path, llm_calls, capsys):
+    biz = business_dir(tmp_path, os.path.join(FIXTURES, "ingest", "threshold_fail.csv"))
+
+    assert run.main(business_dir=biz) == 1
+
+    assert llm_calls == []
+    assert list((tmp_path / "outputs").iterdir()) == []
+    out = capsys.readouterr().out
+    assert "FAILED at Ingest" in out
+    assert "20.0%" in out
