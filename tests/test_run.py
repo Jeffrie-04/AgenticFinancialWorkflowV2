@@ -77,7 +77,8 @@ def stub_model_calls(monkeypatch):
     def fake_call_model(prompt):
         prompts.append(prompt)
         if phase3_categorized.ROWS_START in prompt:
-            block = prompt.split(phase3_categorized.ROWS_START, 1)[1].split(phase3_categorized.ROWS_END, 1)[0]
+            block = prompt.split(f"\n{phase3_categorized.ROWS_START}\n", 1)[1].split(
+                f"\n{phase3_categorized.ROWS_END}", 1)[0]
             rows = [json.loads(line) for line in block.strip().splitlines()]
             return json.dumps({"categorized": [
                 {"id": r["id"], "category": "Income" if r["direction"] == "CREDIT" else "Other"}
