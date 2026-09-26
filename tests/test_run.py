@@ -150,12 +150,20 @@ def test_codex_finding1_only_ok_rows_reach_any_prompt(tmp_path, monkeypatch):
     assert dq["kpi_join"]["rows_in_kpis"] == 8
 
 
+def summary_prompt(prompts):
+    return next(p for p in prompts if "financial reporting agent" in p)
+
+
 PII_IN_FIXTURE = ["212-555-0147", "jane.doe@example.com", "4111 1111 1111 1111", "123456789012",
                   "(415) 555-0100", "3782 822463 10005", "billing+ops@gusto.com", "4111-1111-1111-1111",
                   "+1 415 555 0100",
                   "4012  8888  8888  1881",                   # case 1: whitespace run
                   "5500\u00a00000\u00a00000\u00a00004",        # case 1: non-breaking spaces
-                  "josé@example.com"]                          # case 2: Unicode email
+                  "josé@example.com",                          # case 2: Unicode email
+                  "5555 - 5555 - 5555 - 4444",                 # spaced hyphens (top merchant)
+                  "4000 0566 - 5566-5556",                     # mixed separators (top client)
+                  "6011\u00ad1111\u00ad1111\u00ad1117",         # soft hyphens (format chars)
+                  "4000\u20630000\u20630000\u20630002"]         # invisible separators
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 PHONE_RE = re.compile(r"\(?\d{3}\)?[ .-]\d{3}[ .-]\d{4}")
 # Card or account shapes: 8+ contiguous digits, or 4-digit groups (dates like
@@ -175,11 +183,16 @@ def test_no_pii_pattern_in_any_prompt(tmp_path, monkeypatch):
 
     outputs = tmp_path / "outputs"
     ingested = json.loads((outputs / "ingested.json").read_text())["transactions"]
-    assert [t["status"] for t in ingested] == ["OK"] * 13
+    assert [t["status"] for t in ingested] == ["OK"] * 14
     ids = [t["id"] for t in ingested]
     assert len(prompts) == 5  # plan, categorize, repair, summary, reflection
     repair = next(p for p in prompts if "YOUR PREVIOUS REPLY WAS REJECTED" in p)
     assert "Card ****1881" in repair and "Card ****0004" in repair and "josé" not in repair
+
+    # The spaced-hyphen card sits in the top merchant, which is in the plan
+    # sample, both categorizer prompts and the KPIs: masked in all five.
+    assert all("****4444" in p for p in prompts)
+    assert "****5556" in summary_prompt(prompts) and "****1117" in repair and "****0002" in repair
 
     for prompt in prompts:
         assert "@" not in prompt  # every email, ASCII or not, is masked

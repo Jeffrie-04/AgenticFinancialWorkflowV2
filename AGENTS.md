@@ -20,7 +20,7 @@ Rules:
 ## Architecture invariants
 - `kpis.py` never imports from `afw/llm/`.
 - Categories come only from the `Category` enum in `afw/models.py`.
-- Model output is always schema-validated; failures go retry → NEEDS_REVIEW, never crash, never guess.
+- Categorizer output is schema-validated; failures retry once, then NEEDS_REVIEW, never crash. Plan output records errors without retry; narrative output is checked by grounding (Phase 3).
 - Amounts/dates/merchants come from source data, never from model output.
 - `app.py` never calls a model on page load.
 

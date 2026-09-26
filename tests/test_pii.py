@@ -123,3 +123,30 @@ def test_card_split_by_zero_width_space_is_masked(card):
 def test_zero_width_characters_are_stripped():
     # zero-width space, non-joiner, joiner (u200b-u200d), word joiner (u2060), BOM (ufeff)
     assert mask_pii("a\u200bb\u200cc\u200dd\u2060e\ufefff") == "abcdef"
+
+
+
+# ------------------------------------------------ final masking round
+
+@pytest.mark.parametrize("card", [
+    "4111 - 1111 - 1111 - 1111",
+    "4111 -1111- 1111 1111",
+    "4111-1111 1111 - 1111",
+    "4111 1111-1111 -1111",
+])
+def test_card_with_spaced_or_mixed_hyphens_is_masked(card):
+    assert mask_pii(f"Card {card} charged") == "Card ****1111 charged"
+
+
+def test_amex_with_spaced_hyphens_is_masked():
+    assert mask_pii("Amex 3782 - 822463 - 10005") == "Amex ****0005"
+
+
+@pytest.mark.parametrize("char", ["\u00ad", "\u2063", "\u202e", "\u061c", "\u200e"])
+def test_any_format_character_between_groups_is_stripped(char):
+    card = char.join(["4111", "1111", "1111", "1111"])
+    assert mask_pii(f"Card {card} charged") == "Card ****1111 charged"
+
+
+def test_format_characters_stripped_but_visible_text_kept():
+    assert mask_pii("Caf\u00ade\u2063 Nero\u202e") == "Cafe Nero"
