@@ -1,0 +1,30 @@
+{
+  "source_file": "transactions.csv",
+  "counts": {
+    "rows": 35,
+    "ok": 35,
+    "needs_review": 0,
+    "rejected": 0
+  },
+  "reasons": {},
+  "needs_review_total": {
+    "debit": "0.00",
+    "credit": "0.00",
+    "rows": 0
+  },
+  "description_truncated": 0,
+  "warnings": [],
+  "kpi_join": {
+    "rows_in_kpis": 35,
+    "join_ambiguous": 0,
+    "join_missing": 0,
+    "category_invalid": 0,
+    "refund_original_excluded": 0,
+    "categorized_unknown_id": 0,
+    "excluded_total": {
+      "debit": "0.00",
+      "credit": "0.00",
+      "rows": 0
+    }
+  }
+}

@@ -1,255 +1,171 @@
 {
   "categorized": [
     {
-      "date": "10-04-2024",
-      "merchant": "Oakwood HOA Contract",
-      "amount": -6500.0,
+      "id": "bee0ed31dcecd185-0",
       "category": "Income"
     },
     {
-      "date": "10-11-2024",
-      "merchant": "Riverside Apartments",
-      "amount": -4200.0,
+      "id": "f582f49dd8718b1b-0",
       "category": "Income"
     },
     {
-      "date": "10-07-2024",
-      "merchant": "Patterson Residence Install",
-      "amount": -8900.0,
+      "id": "4621aecfae8b43d5-0",
       "category": "Income"
     },
     {
-      "date": "10-18-2024",
-      "merchant": "Fall Cleanup - Residential Batch",
-      "amount": -5340.0,
+      "id": "0afba5554a2e4e24-0",
       "category": "Income"
     },
     {
-      "date": "10-21-2024",
-      "merchant": "Greenfield Estate Project",
-      "amount": -12500.0,
+      "id": "d1346a1f18eb6aa7-0",
       "category": "Income"
     },
     {
-      "date": "10-25-2024",
-      "merchant": "Residential Maintenance Batch",
-      "amount": -3820.0,
+      "id": "2ea94ffce4c582f7-0",
       "category": "Income"
     },
     {
-      "date": "10-28-2024",
-      "merchant": "Corporate Park Contract",
-      "amount": -3500.0,
+      "id": "232e58b923834e6a-0",
       "category": "Income"
     },
     {
-      "date": "10-14-2024",
-      "merchant": "Tree Removal Job",
-      "amount": -2400.0,
+      "id": "d539a78d0a3ed885-0",
       "category": "Income"
     },
     {
-      "date": "10-02-2024",
-      "merchant": "Shell Gas",
-      "amount": 420.5,
+      "id": "be4a2c922d4ddc6f-0",
       "category": "Other"
     },
     {
-      "date": "10-09-2024",
-      "merchant": "Shell Gas",
-      "amount": 385.75,
+      "id": "9609964209c56c42-0",
       "category": "Other"
     },
     {
-      "date": "10-16-2024",
-      "merchant": "BP Gas",
-      "amount": 410.2,
+      "id": "77cd9bff54b3264e-0",
       "category": "Other"
     },
     {
-      "date": "10-23-2024",
-      "merchant": "Shell Gas",
-      "amount": 445.6,
+      "id": "125b24abe9786f4d-0",
       "category": "Other"
     },
     {
-      "date": "10-05-2024",
-      "merchant": "Wawa Fuel",
-      "amount": 180.3,
+      "id": "6a0afd1503603471-0",
       "category": "Other"
     },
     {
-      "date": "10-19-2024",
-      "merchant": "Wawa Fuel",
-      "amount": 165.8,
+      "id": "66a712ab6b55a3e4-0",
       "category": "Other"
     },
     {
-      "date": "10-06-2024",
-      "merchant": "SiteOne Landscape Supply",
-      "amount": 2840.0,
+      "id": "0b3cadce8e5b657f-0",
       "category": "Shopping"
     },
     {
-      "date": "10-07-2024",
-      "merchant": "Stone Yard Supply",
-      "amount": 3200.0,
+      "id": "ddd5c97d86370bc8-0",
       "category": "Shopping"
     },
     {
-      "date": "10-20-2024",
-      "merchant": "SiteOne Landscape Supply",
-      "amount": 3680.0,
+      "id": "4312c1675c7c5090-0",
       "category": "Shopping"
     },
     {
-      "date": "10-13-2024",
-      "merchant": "Local Nursery",
-      "amount": 1240.0,
+      "id": "de23b8df2e091c29-0",
       "category": "Shopping"
     },
     {
-      "date": "10-10-2024",
-      "merchant": "Home Depot",
-      "amount": 680.4,
+      "id": "7606255d721ff2c0-0",
       "category": "Shopping"
     },
     {
-      "date": "10-17-2024",
-      "merchant": "Home Depot",
-      "amount": 520.9,
+      "id": "c50e1b8c66c37f95-0",
       "category": "Shopping"
     },
     {
-      "date": "10-24-2024",
-      "merchant": "Bulk Mulch Supplier",
-      "amount": 1450.0,
+      "id": "8b2f53f90220cf03-0",
       "category": "Shopping"
     },
     {
-      "date": "10-12-2024",
-      "merchant": "Toro Dealer",
-      "amount": 4200.0,
+      "id": "6039d4208b8e2c0b-0",
       "category": "Shopping"
     },
     {
-      "date": "10-15-2024",
-      "merchant": "Equipment Repair Shop",
-      "amount": 680.0,
+      "id": "368967186afdca17-0",
       "category": "Shopping"
     },
     {
-      "date": "10-22-2024",
-      "merchant": "Stihl Dealer",
-      "amount": 890.5,
+      "id": "173e3dcc7ec7aabd-0",
       "category": "Shopping"
     },
     {
-      "date": "10-04-2024",
-      "merchant": "Gusto Payroll",
-      "amount": 9800.0,
+      "id": "0b435527a3340557-0",
       "category": "Utilities"
     },
     {
-      "date": "10-18-2024",
-      "merchant": "Gusto Payroll",
-      "amount": 10200.0,
+      "id": "82c038b49ac6ca85-0",
       "category": "Utilities"
     },
     {
-      "date": "10-03-2024",
-      "merchant": "Commercial Auto Insurance",
-      "amount": 1450.0,
+      "id": "d5e76c2037c19f5d-0",
       "category": "Utilities"
     },
     {
-      "date": "10-03-2024",
-      "merchant": "Business Liability Insurance",
-      "amount": 680.0,
+      "id": "0fa5c9f3537c13d3-0",
       "category": "Utilities"
     },
     {
-      "date": "10-08-2024",
-      "merchant": "Truck Lease Payment",
-      "amount": 1200.0,
+      "id": "af594b3fd2ac0e62-0",
       "category": "Utilities"
     },
     {
-      "date": "10-11-2024",
-      "merchant": "County Landfill",
-      "amount": 520.0,
+      "id": "1fc48ac41e22e0c4-0",
       "category": "Other"
     },
     {
-      "date": "10-25-2024",
-      "merchant": "County Landfill",
-      "amount": 480.0,
+      "id": "524b3d0a2cc10ba3-0",
       "category": "Other"
     },
     {
-      "date": "10-10-2024",
-      "merchant": "Jobber Software",
-      "amount": 129.0,
+      "id": "d558f3cbf1aabe10-0",
       "category": "Utilities"
     },
     {
-      "date": "10-15-2024",
-      "merchant": "QuickBooks Online",
-      "amount": 80.0,
+      "id": "45cfa9e546915754-0",
       "category": "Utilities"
     },
     {
-      "date": "10-13-2024",
-      "merchant": "Verizon",
-      "amount": 220.0,
+      "id": "4cedab85523616ed-0",
       "category": "Utilities"
     },
     {
-      "date": "10-07-2024",
-      "merchant": "Equipment Storage Rent",
-      "amount": 850.0,
+      "id": "e221de17d4b5b5b7-0",
       "category": "Utilities"
     },
     {
-      "date": "10-09-2024",
-      "merchant": "Subway",
-      "amount": 145.6,
+      "id": "a696a66c2316d761-0",
       "category": "Dining"
     },
     {
-      "date": "10-21-2024",
-      "merchant": "Local Deli",
-      "amount": 180.3,
+      "id": "d040c5925f97bc89-0",
       "category": "Dining"
     },
     {
-      "date": "10-16-2024",
-      "merchant": "Dunkin",
-      "amount": 62.4,
+      "id": "0ca0c7198bb22c5a-0",
       "category": "Dining"
     },
     {
-      "date": "10-14-2024",
-      "merchant": "DMV Registration",
-      "amount": 340.0,
+      "id": "04a6da25b8e79578-0",
       "category": "Other"
     },
     {
-      "date": "10-19-2024",
-      "merchant": "Uniform Supply Co",
-      "amount": 420.0,
+      "id": "02042db185a274e9-0",
       "category": "Shopping"
     },
     {
-      "date": "10-29-2024",
-      "merchant": "Autumn Install Project",
-      "amount": -7200.0,
+      "id": "99f9d57f7f2bbd7a-0",
       "category": "Income"
     },
     {
-      "date": "10-30-2024",
-      "merchant": "Snow Contract Prepayment",
-      "amount": -4500.0,
+      "id": "83321c5f851df7f6-0",
       "category": "Income"
     }
   ]
