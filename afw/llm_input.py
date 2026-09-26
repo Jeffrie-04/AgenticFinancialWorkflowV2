@@ -8,7 +8,12 @@ those, only model_rows() (non-refund DEBITs) are put in a prompt.
 import json
 import os
 
+from afw.guards.pii import mask_pii
 from afw.models import Direction, Status
+
+# Free-text fields that can carry PII; everything else (ids, amounts, dates,
+# direction) is passed through untouched.
+MASKED_FIELDS = ("merchant", "description")
 
 
 def load_ok_rows(outputs_dir):
@@ -22,6 +27,13 @@ def model_rows(rows):
     are Income by rule and refunds take their original DEBIT's category, so
     neither needs the model, and client names in CREDITs stay local."""
     return [t for t in rows if t["direction"] == Direction.DEBIT.value and not t["is_refund"]]
+
+
+def prompt_row(row, fields):
+    """One row, reduced to `fields`, as a prompt line with PII masked in its
+    merchant and description text. Every row put in a prompt goes through here."""
+    return prompt_line({f: mask_pii(row[f]) if f in MASKED_FIELDS and isinstance(row[f], str) else row[f]
+                        for f in fields})
 
 
 def prompt_line(fields):

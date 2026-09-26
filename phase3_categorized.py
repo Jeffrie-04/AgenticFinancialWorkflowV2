@@ -20,7 +20,7 @@ import os
 from collections import Counter
 
 from afw.guards.output_validation import check_reply, extract_json
-from afw.llm_input import load_ok_rows, model_rows, prompt_line
+from afw.llm_input import load_ok_rows, model_rows, prompt_row
 from afw.models import DEBIT_CATEGORIES, Category, Direction
 from bedrock_client import call_model
 
@@ -43,9 +43,7 @@ CATEGORY_GUIDE = {
 def build_prompt(rows):
     names = ", ".join(c.value for c in DEBIT_CATEGORIES)
     guide = "\n".join(f"- {c.value}: {text}" for c, text in CATEGORY_GUIDE.items())
-    block = "\n".join(prompt_line({"id": t["id"], "merchant": t["merchant"],
-                                   "description": t["description"], "direction": t["direction"]})
-                      for t in rows)
+    block = "\n".join(prompt_row(t, ("id", "merchant", "description", "direction")) for t in rows)
     example = json.dumps({"categorized": [{"id": "<id copied from input>", "category": Category.OTHER.value}]})
     return f"""ROLE: You are a transaction categorization agent for small business accounting.
 

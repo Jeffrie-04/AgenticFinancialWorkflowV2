@@ -10,7 +10,7 @@ import json
 import os
 
 from afw.guards.output_validation import extract_json
-from afw.llm_input import load_ok_rows, model_rows, prompt_line
+from afw.llm_input import load_ok_rows, model_rows, prompt_row
 from bedrock_client import call_model
 
 
@@ -18,7 +18,7 @@ def main(outputs_dir="outputs"):
     rows = load_ok_rows(outputs_dir)
     # Sample rows follow the same rule as the categorizer: non-refund DEBITs
     # only, so client names in CREDITs stay local. Counts and dates aren't text.
-    sample = "\n".join(prompt_line({k: t[k] for k in ("date", "merchant", "amount", "direction")})
+    sample = "\n".join(prompt_row(t, ("date", "merchant", "amount", "direction"))
                        for t in model_rows(rows)[:5])
     dates = sorted(t["date"] for t in rows)  # ISO dates sort chronologically
     date_range = f"{dates[0]} to {dates[-1]}" if dates else "n/a"

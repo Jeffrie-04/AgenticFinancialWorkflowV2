@@ -1,6 +1,7 @@
 import json
 import os
 
+from afw.guards.pii import mask_strings
 from bedrock_client import call_model
 
 
@@ -33,7 +34,7 @@ Rules:
 - Plain text only: one paragraph, no lists, no JSON, no markdown, ≤100 words.
 
 KPIS:
-{json.dumps(kpis, indent=2)}
+{json.dumps(mask_strings(kpis), indent=2)}
 """
 
 

@@ -1,6 +1,7 @@
 import json
 import os
 
+from afw.guards.pii import mask_strings
 from bedrock_client import call_model
 
 
@@ -8,7 +9,7 @@ def main(outputs_dir="outputs"):
     # Load inputs
     with open(os.path.join(outputs_dir, "kpis.json"), "r") as f:
         kpis = json.load(f)
-    kpis_json = json.dumps(kpis, indent=2)
+    kpis_json = json.dumps(mask_strings(kpis), indent=2)  # prompt copy only; kpis.json keeps the text
 
     # ----- INSERT YOUR FINAL REFLECTION PROMPT HERE -----
     reflection_prompt = f"""ROLE:
