@@ -18,7 +18,7 @@ Rules:
 - Don't make edits unless explicitly asked.
 
 ## Architecture invariants
-- `kpis.py` never imports from `afw/llm/`.
+- `phase3_kpisnoAI.py` never imports `bedrock_client` or any LLM code.
 - Categories come only from the `Category` enum in `afw/models.py`.
 - Categorizer output is schema-validated; failures retry once, then NEEDS_REVIEW, never crash. Plan output records errors without retry; narrative output is checked by grounding (Phase 3).
 - Amounts/dates/merchants come from source data, never from model output.
