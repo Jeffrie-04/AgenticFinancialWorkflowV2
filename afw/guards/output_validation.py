@@ -15,6 +15,9 @@ from pydantic import BaseModel, ConfigDict, StrictStr, ValidationError
 from afw.models import Category, direction_allows
 
 FENCE = "```"
+# Far above any real categorizer reply (about 60 characters per row); a longer
+# reply is treated as unusable rather than parsed.
+MAX_REPLY_CHARS = 100_000
 CATEGORY_VALUES = {c.value for c in Category}
 
 
@@ -27,6 +30,8 @@ def extract_json(text):
     text = text.strip()
     if not text:
         return None, "reply is empty"
+    if len(text) > MAX_REPLY_CHARS:
+        return None, f"reply is too long ({len(text)} characters)"
 
     if text.startswith(FENCE):
         text = text[len(FENCE):]
@@ -40,6 +45,10 @@ def extract_json(text):
         return json.loads(text[start:end + 1]), None
     except json.JSONDecodeError as e:
         return None, f"reply is not valid JSON ({e.msg} at char {e.pos})"
+    except ValueError:  # e.g. an integer longer than Python's digit limit
+        return None, "reply is not valid JSON (a value is out of range)"
+    except RecursionError:
+        return None, "reply is nested too deeply"
 
 
 class ReplyEnvelope(BaseModel):
@@ -60,7 +69,6 @@ class ReplyCheck:
     accepted: dict = field(default_factory=dict)  # id -> category
     failures: dict = field(default_factory=dict)  # id -> reason
     counts: Counter = field(default_factory=Counter)
-    returned: dict = field(default_factory=dict)  # sent id -> categories the reply gave it
     error: str | None = None  # the reply as a whole was unusable
 
 
@@ -96,7 +104,6 @@ def check_reply(obj, sent):
             result.counts["unknown_ids"] += 1
             continue
         returned[item.id].append(item.category)
-    result.returned = dict(returned)
 
     for row_id, row in sent.items():
         categories = returned.get(row_id)

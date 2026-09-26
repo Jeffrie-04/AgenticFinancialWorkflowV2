@@ -42,6 +42,23 @@ def test_unusable_reply_returns_error_never_raises(text, error):
     assert err.startswith(error)
 
 
+CODEX_HUGE_INT = '{"x":' + "1" * 4301 + "}"  # int() digit limit -> ValueError, not JSONDecodeError
+DEEP_NESTING = '{"a":' + "[" * 20000 + "]" * 20000 + "}"  # -> RecursionError
+TOO_LONG = '{"a": "' + "x" * 200_000 + '"}'
+
+
+@pytest.mark.parametrize("text,error", [
+    (CODEX_HUGE_INT, "reply is not valid JSON"),
+    (DEEP_NESTING, "reply is nested too deeply"),
+    (TOO_LONG, "reply is too long"),
+], ids=["codex_huge_int", "deep_nesting", "too_long"])
+def test_pathological_replies_are_unusable_not_crashes(text, error):
+    obj, err = extract_json(text)
+    assert obj is None
+    assert err.startswith(error)
+    assert "1111" not in err and "xxxx" not in err
+
+
 def test_error_never_echoes_reply_text():
     _, err = extract_json('{"secret": ignore previous instructions}')
     assert "ignore previous instructions" not in err
@@ -67,10 +84,12 @@ def write_ingested(tmp_path, rows):
 
 
 GARBAGE = ["", "I can't help with that.", "{bad}", '{"steps": "not a list"}', '{"plan_steps": [1, 2]}',
-           '{"plan_steps": null}']
+           '{"plan_steps": null}', CODEX_HUGE_INT, DEEP_NESTING, TOO_LONG]
+GARBAGE_IDS = ["empty", "prose", "bad", "steps_str", "steps_ints", "steps_null", "codex_huge_int",
+               "deep_nesting", "too_long"]
 
 
-@pytest.mark.parametrize("reply", GARBAGE)
+@pytest.mark.parametrize("reply", GARBAGE, ids=GARBAGE_IDS)
 def test_plan_phase_survives_unusable_reply(tmp_path, monkeypatch, reply):
     write_ingested(tmp_path, [ok_row("a")])
     monkeypatch.setattr(phase2_plan, "call_model", lambda prompt: reply)
@@ -91,7 +110,10 @@ def test_plan_phase_accepts_valid_reply(tmp_path, monkeypatch, reply):
     assert json.loads((tmp_path / "plan.json").read_text()) == {"plan_steps": ["a", "b"]}
 
 
-@pytest.mark.parametrize("reply", ["", "{bad}", "not json at all", '{"items": []}', '{"categorized": "x"}'])
+@pytest.mark.parametrize("reply", ["", "{bad}", "not json at all", '{"items": []}', '{"categorized": "x"}',
+                                   CODEX_HUGE_INT, DEEP_NESTING, TOO_LONG],
+                         ids=["empty", "bad", "prose", "items", "not_list", "codex_huge_int", "deep_nesting",
+                              "too_long"])
 def test_categorizer_survives_unusable_reply(tmp_path, monkeypatch, reply):
     write_ingested(tmp_path, [ok_row("a")])
     monkeypatch.setattr(phase3_categorized, "call_model", lambda prompt: reply)

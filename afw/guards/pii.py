@@ -6,8 +6,12 @@ sent to the summary and reflection prompts), never to amounts, dates or ids.
 Person names are not masked: merchants are names. Local files keep the
 original text; only prompts are masked.
 
+First, every whitespace run (including non-breaking, narrow, figure and
+ideographic spaces, tabs and newlines) collapses to one space, so a number
+can't escape a pattern by being split with unusual spacing.
+
 Masks, in order:
-- emails -> [EMAIL]
+- emails, any script (anything@anything.tld; over-masking is fine) -> [EMAIL]
 - US phone numbers written with separators or +1 -> [PHONE]
 - card numbers: 13-19 digits, contiguous or in 4-digit groups (or Amex
   4-6-5) separated by one space or dash -> ****1234
@@ -19,7 +23,8 @@ that over-masking is accepted.
 """
 import re
 
-EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}")
+WHITESPACE_RUN = re.compile(r"\s+")
+EMAIL = re.compile(r"[^\s@]+@[^\s@]+\.[^\s@]+")
 PHONE = re.compile(r"(?<![\d+])(?:\+1[ .-]?)?(?:\(\d{3}\) ?|\d{3}[ .-])\d{3}[ .-]\d{4}(?!\d)")
 NOT_AFTER_NUMBER = r"(?<![\d.,])"
 NOT_BEFORE_NUMBER = r"(?!\d|[.,]\d)"
@@ -35,6 +40,7 @@ def _last_four(match):
 
 
 def mask_pii(text):
+    text = WHITESPACE_RUN.sub(" ", text)
     text = EMAIL.sub("[EMAIL]", text)
     text = PHONE.sub("[PHONE]", text)
     text = CARD.sub(_last_four, text)

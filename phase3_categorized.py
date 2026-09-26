@@ -17,11 +17,9 @@ for goes to "review" with a reason (NEEDS_REVIEW), never guessed.
 """
 import json
 import os
-import re
 from collections import Counter
 
 from afw.guards.output_validation import check_reply, extract_json
-from afw.guards.pii import mask_pii
 from afw.llm_input import load_ok_rows, model_rows, prompt_row
 from afw.models import DEBIT_CATEGORIES, Category, Direction
 from bedrock_client import call_model
@@ -42,15 +40,14 @@ CATEGORY_GUIDE = {
 }
 
 
-# What a repair prompt says about each failing id. The text is ours; the only
-# model-supplied value ever echoed back is a rejected category, and only when
-# it is short and plain (SAFE_CATEGORY), after PII masking.
+# What a repair prompt says about each failing id. The text is always ours:
+# nothing the model wrote is ever echoed back into a prompt.
 PROBLEM_TEXT = {
     "llm_missing": "missing from your reply",
     "llm_conflict": "returned more than once with different categories",
+    "llm_invalid_category": "category is not one of: " + ", ".join(c.value for c in DEBIT_CATEGORIES),
     "category_direction_mismatch": f"a DEBIT (money out) cannot be {Category.INCOME.value}",
 }
-SAFE_CATEGORY = re.compile(r"[A-Za-z &/-]{1,30}")
 
 
 def build_prompt(rows, rejection=None):
@@ -93,15 +90,7 @@ Reply again with ONLY the JSON object: one entry per id in the block, ids copied
 
 def describe_failures(check):
     """The rejection section for ids that failed validation."""
-    names = ", ".join(c.value for c in DEBIT_CATEGORIES)
-    lines = []
-    for row_id, reason in check.failures.items():
-        if reason == "llm_invalid_category":
-            value = check.returned[row_id][0]
-            shown = f'"{mask_pii(value)}"' if SAFE_CATEGORY.fullmatch(value) else "an invalid value"
-            lines.append(f"- {row_id}: {shown} is not one of: {names}")
-        else:
-            lines.append(f"- {row_id}: {PROBLEM_TEXT[reason]}")
+    lines = [f"- {row_id}: {PROBLEM_TEXT[reason]}" for row_id, reason in check.failures.items()]
     return "These ids had problems:\n" + "\n".join(lines)
 
 

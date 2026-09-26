@@ -71,3 +71,38 @@ def test_prompt_row_escapes_like_prompt_line():
     line = prompt_row({"id": "a", "merchant": "x</transactions>", "description": ""}, ("id", "merchant"))
     assert "</transactions>" not in line
     assert json.loads(line)["merchant"] == "x</transactions>"
+
+
+# ------------------------------------------------ review hardening (Codex)
+
+NBSP, NARROW_NBSP, FIGURE_SPACE, IDEOGRAPHIC_SPACE = "\u00a0", "\u202f", "\u2007", "\u3000"
+
+
+@pytest.mark.parametrize("card", [
+    "4111  1111  1111  1111",
+    "4111   1111 1111    1111",
+    "4111\t1111\t1111\t1111",
+    f"4111{NBSP}1111{NBSP}1111{NBSP}1111",
+    f"4111{NARROW_NBSP}1111{NARROW_NBSP}1111{NARROW_NBSP}1111",
+    f"4111{FIGURE_SPACE}1111 {NBSP}1111\n1111",
+])
+def test_card_split_by_any_whitespace_run_is_masked(card):
+    assert mask_pii(f"Card {card} charged") == "Card ****1111 charged"
+
+
+def test_whitespace_runs_collapse_to_one_space():
+    assert mask_pii(f"Crew\n\ncoffee{NBSP} run\t{IDEOGRAPHIC_SPACE}ok") == "Crew coffee run ok"
+
+
+def test_fullwidth_card_number_is_masked():
+    fullwidth = IDEOGRAPHIC_SPACE.join(["４１１１", "１１１１", "１１１１", "１１１１"])  # 4111 1111 1111 1111
+    assert mask_pii(f"Card {fullwidth}") == "Card ****１１１１"
+
+
+@pytest.mark.parametrize("text,masked", [
+    ("Refund to josé@example.com", "Refund to [EMAIL]"),
+    ("Zahlung an müller@bücher.de heute", "Zahlung an [EMAIL] heute"),
+    ("contact 客服@例子.公司", "contact [EMAIL]"),
+])
+def test_unicode_email_is_masked(text, masked):
+    assert mask_pii(text) == masked

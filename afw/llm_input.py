@@ -23,9 +23,12 @@ def load_ok_rows(outputs_dir):
 
 
 def model_rows(rows):
-    """The rows whose text may be sent to a model: non-refund DEBITs. CREDITs
-    are Income by rule and refunds take their original DEBIT's category, so
-    neither needs the model, and client names in CREDITs stay local."""
+    """The rows whose text may be sent to the categorizer and the plan
+    sample: non-refund DEBITs. CREDITs are Income by rule and refunds take
+    their original DEBIT's category, so neither needs the model. Client
+    names are not fully local, though: by deliberate decision, the top
+    client (a CREDIT merchant) still reaches the summary and reflection
+    prompts through the KPIs, PII-masked but with the name itself intact."""
     return [t for t in rows if t["direction"] == Direction.DEBIT.value and not t["is_refund"]]
 
 

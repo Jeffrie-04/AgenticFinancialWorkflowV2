@@ -69,13 +69,18 @@ def test_h1_clean_csv_runs_whole_pipeline(tmp_path, llm_calls):
     assert dq["kpi_join"]["rows_in_kpis"] == 42
 
 
-def stub_model_calls(monkeypatch):
+def stub_model_calls(monkeypatch, reject_first_categorization=False):
     """Replace call_model in every phase with a stub that records each prompt
-    and returns a valid reply; the real client fails the test if reached."""
+    and returns a valid reply; the real client fails the test if reached.
+    reject_first_categorization: the first categorizer reply is empty, so
+    every row is missing and a repair prompt is built for all of them."""
     prompts = []
 
     def fake_call_model(prompt):
         prompts.append(prompt)
+        is_first_categorization = not any(phase3_categorized.ROWS_START in p for p in prompts[:-1])
+        if phase3_categorized.ROWS_START in prompt and reject_first_categorization and is_first_categorization:
+            return json.dumps({"categorized": []})
         if phase3_categorized.ROWS_START in prompt:
             block = prompt.split(f"\n{phase3_categorized.ROWS_START}\n", 1)[1].split(
                 f"\n{phase3_categorized.ROWS_END}", 1)[0]
@@ -147,30 +152,37 @@ def test_codex_finding1_only_ok_rows_reach_any_prompt(tmp_path, monkeypatch):
 
 PII_IN_FIXTURE = ["212-555-0147", "jane.doe@example.com", "4111 1111 1111 1111", "123456789012",
                   "(415) 555-0100", "3782 822463 10005", "billing+ops@gusto.com", "4111-1111-1111-1111",
-                  "+1 415 555 0100"]
+                  "+1 415 555 0100",
+                  "4012  8888  8888  1881",                   # case 1: whitespace run
+                  "5500\u00a00000\u00a00000\u00a00004",        # case 1: non-breaking spaces
+                  "josé@example.com"]                          # case 2: Unicode email
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 PHONE_RE = re.compile(r"\(?\d{3}\)?[ .-]\d{3}[ .-]\d{4}")
 # Card or account shapes: 8+ contiguous digits, or 4-digit groups (dates like
 # 2024-10-03 are allowed in prompts and don't match).
-LONG_DIGITS_RE = re.compile(r"\d{8,}|\d{4}[ -]\d{4,6}[ -]\d{4,5}")
+LONG_DIGITS_RE = re.compile(r"\d{8,}|\d{4}[\s-]+\d{4,6}[\s-]+\d{4,5}")
 
 
 def test_no_pii_pattern_in_any_prompt(tmp_path, monkeypatch):
     """PII in DEBIT descriptions (card, account, phone, email), in a DEBIT
     merchant that becomes top merchant, and in a CREDIT merchant that becomes
     top client, so all four prompts (plan, categorize, summary, reflection)
-    are exercised."""
-    prompts = stub_model_calls(monkeypatch)
+    are exercised. The first categorizer reply is rejected, so the repair
+    prompt (all DEBIT rows again) is checked too."""
+    prompts = stub_model_calls(monkeypatch, reject_first_categorization=True)
     biz = business_dir(tmp_path, os.path.join(FIXTURES, "pipeline", "pii.csv"))
     assert run.main(business_dir=biz) == 0
 
     outputs = tmp_path / "outputs"
     ingested = json.loads((outputs / "ingested.json").read_text())["transactions"]
-    assert [t["status"] for t in ingested] == ["OK"] * 10
+    assert [t["status"] for t in ingested] == ["OK"] * 13
     ids = [t["id"] for t in ingested]
-    assert len(prompts) == 4
+    assert len(prompts) == 5  # plan, categorize, repair, summary, reflection
+    repair = next(p for p in prompts if "YOUR PREVIOUS REPLY WAS REJECTED" in p)
+    assert "Card ****1881" in repair and "Card ****0004" in repair and "josé" not in repair
 
     for prompt in prompts:
+        assert "@" not in prompt  # every email, ASCII or not, is masked
         for pii in PII_IN_FIXTURE:
             assert pii not in prompt
         text = prompt
@@ -187,10 +199,13 @@ def test_no_pii_pattern_in_any_prompt(tmp_path, monkeypatch):
     assert "Zelle [EMAIL]" in summary  # top merchant
     assert "Wire from [PHONE]" in summary  # top client
 
-    # Local files keep the original text.
-    kept = (outputs / "ingested.json").read_text() + (outputs / "transactions.json").read_text()
-    for pii in PII_IN_FIXTURE:
-        assert pii in kept
+    # Local files keep the original text (compared after JSON decoding, which
+    # turns escaped non-breaking spaces back into the original characters).
+    for name in ("ingested.json", "transactions.json"):
+        rows = json.loads((outputs / name).read_text())["transactions"]
+        kept = " | ".join(f"{t['merchant']} {t['description']}" for t in rows)
+        for pii in PII_IN_FIXTURE:
+            assert pii in kept, (name, pii)
 
 
 def test_h2_failed_ingest_stops_before_any_llm_call(tmp_path, llm_calls, capsys):
