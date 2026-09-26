@@ -50,6 +50,17 @@ class Category(str, Enum):
     OTHER = "Other"
 
 
+# Only non-refund DEBITs are categorized by the model; non-refund CREDITs are
+# Income by rule, and refunds take their original DEBIT's category.
+DEBIT_CATEGORIES = tuple(c for c in Category if c is not Category.INCOME)
+
+
+def direction_allows(direction, category):
+    """False when a category contradicts the row's direction: money out can't
+    be Income."""
+    return not (direction == Direction.DEBIT.value and category == Category.INCOME.value)
+
+
 class SignConvention(str, Enum):
     NEGATIVE_IS_CREDIT = "negative_is_credit"  # card-statement style: -6500.0 = money in
     POSITIVE_IS_CREDIT = "positive_is_credit"  # bank-account style: +6500.0 = money in

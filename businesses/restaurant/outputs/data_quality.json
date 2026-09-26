@@ -20,11 +20,17 @@
     "join_missing": 0,
     "category_invalid": 0,
     "refund_original_excluded": 0,
+    "llm_unparseable": 0,
+    "llm_missing": 0,
+    "llm_conflict": 0,
+    "llm_invalid_category": 0,
+    "category_direction_mismatch": 0,
     "categorized_unknown_id": 0,
     "excluded_total": {
       "debit": "0.00",
       "credit": "0.00",
       "rows": 0
-    }
+    },
+    "llm": {}
   }
 }

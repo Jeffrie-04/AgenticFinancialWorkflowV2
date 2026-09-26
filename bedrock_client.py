@@ -73,37 +73,3 @@ def call_model(prompt):
     if MODEL_PROVIDER == "anthropic_direct":
         return _call_anthropic_direct(prompt)
     return _call_openai(prompt)
-
-
-def clean_json_text(text):
-    text = text.strip()
-
-    # Remove markdown code blocks
-    if text.startswith("```json"):
-        text = text[7:]
-    if text.startswith("```"):
-        text = text[3:]
-    if text.endswith("```"):
-        text = text[:-3]
-    text = text.strip()
-
-    # Find JSON in response
-    start = text.find('{')
-    end = text.rfind('}') + 1
-    if start != -1 and end > start:
-        text = text[start:end]
-    else:
-        print("Error: Could not find JSON in response")
-        print("Raw response:", text[:500])
-        exit(1)
-
-    return text
-
-
-def parse_json_response(text):
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError as e:
-        print(f"Error parsing JSON: {e}")
-        print("Cleaned text:", text[:500])
-        exit(1)

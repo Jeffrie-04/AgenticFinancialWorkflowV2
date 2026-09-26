@@ -1,0 +1,15 @@
+date,merchant,amount,description
+10-01-2024,Wire from 212-555-0147 ref 4000 0566 - 5566-5556,-20000.00,Client retainer
+10-02-2024,Oakwood HOA,-5000.00,Monthly contract
+10-03-2024,Zelle jane.doe@example.com 5555 - 5555 - 5555 - 4444,9000.00,Subcontractor payment
+10-04-2024,Home Depot,1200.00,Card 4111 1111 1111 1111
+10-05-2024,Verizon,180.00,Autopay acct 123456789012
+10-06-2024,Staples,85.40,Call (415) 555-0100 re order
+10-07-2024,Shell Gas,64.20,Amex 3782 822463 10005
+10-08-2024,Gusto Payroll,3000.00,Payroll billing+ops@gusto.com
+10-09-2024,Chipotle,45.10,Card 4111-1111-1111-1111
+10-10-2024,Uber,23.50,Receipt to +1 415 555 0100
+10-11-2024,Best Buy,300.00,Card 4012  8888  8888  1881
+10-12-2024,Costco,250.00,Card 5500 0000 0000 0004
+10-13-2024,Lyft,40.00,Receipt sent to josé@example.com
+10-14-2024,Target,35.00,Card 6011­1111­1111­1117 and 4000⁣0000⁣0000⁣0002

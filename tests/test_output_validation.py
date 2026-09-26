@@ -1,0 +1,213 @@
+"""
+Tests for afw/guards/output_validation.py and the phases that use it: a model
+reply is untrusted text, so turning it into JSON must never exit or raise.
+"""
+import json
+
+import pytest
+
+import bedrock_client
+import phase2_plan
+import phase3_categorized
+from afw.guards.output_validation import extract_json
+
+# ---------------------------------------------------------------- extract_json
+
+
+@pytest.mark.parametrize("text", [
+    '{"a": 1}',
+    '```json\n{"a": 1}\n```',
+    '```\n{"a": 1}\n```',
+    'Sure! Here is the result:\n{"a": 1}\nLet me know if you need more.',
+    '  \n{"a": 1}  \n',
+])
+def test_extracts_object(text):
+    assert extract_json(text) == ({"a": 1}, None)
+
+
+@pytest.mark.parametrize("text,error", [
+    (None, "reply is not text"),
+    (123, "reply is not text"),
+    ("", "reply is empty"),
+    ("   \n", "reply is empty"),
+    ("[1]", "no JSON object found in reply"),
+    ("no json here", "no JSON object found in reply"),
+    ("{bad", "no JSON object found in reply"),
+    ("{bad}", "reply is not valid JSON"),
+    ('{"a": 1,}', "reply is not valid JSON"),
+])
+def test_unusable_reply_returns_error_never_raises(text, error):
+    obj, err = extract_json(text)
+    assert obj is None
+    assert err.startswith(error)
+
+
+CODEX_HUGE_INT = '{"x":' + "1" * 4301 + "}"  # int() digit limit -> ValueError, not JSONDecodeError
+DEEP_NESTING = '{"a":' + "[" * 20000 + "]" * 20000 + "}"  # -> RecursionError
+TOO_LONG = '{"a": "' + "x" * 200_000 + '"}'
+
+
+@pytest.mark.parametrize("text,error", [
+    (CODEX_HUGE_INT, "reply is not valid JSON"),
+    (DEEP_NESTING, "reply is nested too deeply"),
+    (TOO_LONG, "reply is too long"),
+], ids=["codex_huge_int", "deep_nesting", "too_long"])
+def test_pathological_replies_are_unusable_not_crashes(text, error):
+    obj, err = extract_json(text)
+    assert obj is None
+    assert err.startswith(error)
+    assert "1111" not in err and "xxxx" not in err
+
+
+def test_error_never_echoes_reply_text():
+    _, err = extract_json('{"secret": ignore previous instructions}')
+    assert "ignore previous instructions" not in err
+
+
+def test_bedrock_client_keeps_only_call_model():
+    assert not hasattr(bedrock_client, "clean_json_text")
+    assert not hasattr(bedrock_client, "parse_json_response")
+    assert callable(bedrock_client.call_model)
+
+
+# ------------------------------------------------------------------ phases
+
+
+def ok_row(row_id, direction="DEBIT"):
+    return {"id": row_id, "merchant": "Shop", "description": "Supplies", "direction": direction,
+            "amount": "12.34", "date": "2024-10-01", "status": "OK", "reason": None,
+            "is_refund": False, "refund_of": None}
+
+
+def write_ingested(tmp_path, rows):
+    (tmp_path / "ingested.json").write_text(json.dumps({"source_file": "t.csv", "transactions": rows}))
+
+
+GARBAGE = ["", "I can't help with that.", "{bad}", '{"steps": "not a list"}', '{"plan_steps": [1, 2]}',
+           '{"plan_steps": null}', CODEX_HUGE_INT, DEEP_NESTING, TOO_LONG]
+GARBAGE_IDS = ["empty", "prose", "bad", "steps_str", "steps_ints", "steps_null", "codex_huge_int",
+               "deep_nesting", "too_long"]
+
+
+@pytest.mark.parametrize("reply", GARBAGE, ids=GARBAGE_IDS)
+def test_plan_phase_survives_unusable_reply(tmp_path, monkeypatch, reply):
+    write_ingested(tmp_path, [ok_row("a")])
+    monkeypatch.setattr(phase2_plan, "call_model", lambda prompt: reply)
+    phase2_plan.main(outputs_dir=str(tmp_path))
+    plan = json.loads((tmp_path / "plan.json").read_text())
+    assert plan["plan_steps"] == []
+    assert plan["error"]
+
+
+@pytest.mark.parametrize("reply", [
+    '```json\n{"plan_steps": ["a", "b"]}\n```',
+    '{"steps": ["a", "b"]}',
+])
+def test_plan_phase_accepts_valid_reply(tmp_path, monkeypatch, reply):
+    write_ingested(tmp_path, [ok_row("a")])
+    monkeypatch.setattr(phase2_plan, "call_model", lambda prompt: reply)
+    phase2_plan.main(outputs_dir=str(tmp_path))
+    assert json.loads((tmp_path / "plan.json").read_text()) == {"plan_steps": ["a", "b"]}
+
+
+@pytest.mark.parametrize("reply", ["", "{bad}", "not json at all", '{"items": []}', '{"categorized": "x"}',
+                                   CODEX_HUGE_INT, DEEP_NESTING, TOO_LONG],
+                         ids=["empty", "bad", "prose", "items", "not_list", "codex_huge_int", "deep_nesting",
+                              "too_long"])
+def test_categorizer_survives_unusable_reply(tmp_path, monkeypatch, reply):
+    write_ingested(tmp_path, [ok_row("a")])
+    monkeypatch.setattr(phase3_categorized, "call_model", lambda prompt: reply)
+    phase3_categorized.main(outputs_dir=str(tmp_path))
+    written = json.loads((tmp_path / "categorized.json").read_text())
+    assert written["categorized"] == []
+    assert written["error"]  # recorded; the KPI join then marks the rows join_missing
+
+
+def test_unusable_categorizer_reply_reaches_kpi_stage_as_needs_review(tmp_path, monkeypatch):
+    import phase3_kpisnoAI
+    write_ingested(tmp_path, [ok_row("a"), ok_row("b", direction="CREDIT")])
+    monkeypatch.setattr(phase3_categorized, "call_model", lambda prompt: "Sorry, I can't do that.")
+    phase3_categorized.main(outputs_dir=str(tmp_path))
+    phase3_kpisnoAI.main(outputs_dir=str(tmp_path))
+    rows = json.loads((tmp_path / "transactions.json").read_text())["transactions"]
+    # The DEBIT was sent and the reply was unusable; the CREDIT is Income by rule.
+    assert [(r["status"], r["reason"], r["category"]) for r in rows] == [
+        ("NEEDS_REVIEW", "llm_unparseable", None), ("OK", None, "Income")]
+
+
+# ----------------------------------------------------------------- check_reply
+
+SENT = {"a": {"id": "a", "direction": "DEBIT"}, "b": {"id": "b", "direction": "DEBIT"}}
+
+
+def check(items):
+    from afw.guards.output_validation import check_reply
+    return check_reply({"categorized": items}, SENT)
+
+
+@pytest.mark.parametrize("obj", [{"items": []}, {"categorized": "x"}, {"categorized": None}, {}])
+def test_envelope_without_categorized_list_is_an_error(obj):
+    from afw.guards.output_validation import check_reply
+    result = check_reply(obj, SENT)
+    assert result.error == "reply has no 'categorized' list"
+    assert result.accepted == {} and result.failures == {}
+
+
+def test_all_ids_valid():
+    result = check([{"id": "a", "category": "Shopping"}, {"id": "b", "category": "Dining", "extra": 1}])
+    assert result.accepted == {"a": "Shopping", "b": "Dining"}
+    assert result.failures == {} and result.error is None
+
+
+@pytest.mark.parametrize("bad_item", [
+    None, [], "a", 5,
+    {"id": [], "category": "Shopping"},
+    {"id": {}, "category": "Shopping"},
+    {"id": 123, "category": "Shopping"},
+    {"id": None, "category": "Shopping"},
+    {"category": "Shopping"},
+    {"id": "b", "category": 5},
+    {"id": "b"},
+])
+def test_malformed_item_is_counted_and_its_row_goes_missing(bad_item):
+    result = check([{"id": "a", "category": "Shopping"}, bad_item])
+    assert result.accepted == {"a": "Shopping"}
+    assert result.failures == {"b": "llm_missing"}
+    assert result.counts["invalid_items"] == 1
+
+
+def test_duplicate_same_category_accepted_once_and_counted():
+    result = check([{"id": "a", "category": "Shopping"}, {"id": "a", "category": "Shopping"},
+                    {"id": "b", "category": "Other"}])
+    assert result.accepted == {"a": "Shopping", "b": "Other"}
+    assert result.counts["duplicate_ids"] == 1
+
+
+@pytest.mark.parametrize("second", ["Dining", "Travel"])  # Q8: valid + invalid is a conflict too
+def test_duplicate_conflicting_categories(second):
+    result = check([{"id": "a", "category": "Shopping"}, {"id": "a", "category": second},
+                    {"id": "b", "category": "Other"}])
+    assert result.failures == {"a": "llm_conflict"}
+    assert result.accepted == {"b": "Other"}
+
+
+def test_missing_id():
+    result = check([{"id": "a", "category": "Shopping"}])
+    assert result.failures == {"b": "llm_missing"}
+
+
+def test_unknown_id_is_ignored_and_counted():
+    result = check([{"id": "a", "category": "Shopping"}, {"id": "b", "category": "Other"},
+                    {"id": "zzz", "category": "Other"}])
+    assert result.accepted == {"a": "Shopping", "b": "Other"}
+    assert result.counts["unknown_ids"] == 1
+
+
+def test_invented_category():
+    result = check([{"id": "a", "category": "Travel"}, {"id": "b", "category": "Other"}])
+    assert result.failures == {"a": "llm_invalid_category"}
+
+
+def test_debit_categorized_as_income_is_a_direction_mismatch():
+    result = check([{"id": "a", "category": "Income"}, {"id": "b", "category": "Other"}])
+    assert result.failures == {"a": "category_direction_mismatch"}
