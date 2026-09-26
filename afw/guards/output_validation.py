@@ -60,6 +60,7 @@ class ReplyCheck:
     accepted: dict = field(default_factory=dict)  # id -> category
     failures: dict = field(default_factory=dict)  # id -> reason
     counts: Counter = field(default_factory=Counter)
+    returned: dict = field(default_factory=dict)  # sent id -> categories the reply gave it
     error: str | None = None  # the reply as a whole was unusable
 
 
@@ -95,6 +96,7 @@ def check_reply(obj, sent):
             result.counts["unknown_ids"] += 1
             continue
         returned[item.id].append(item.category)
+    result.returned = dict(returned)
 
     for row_id, row in sent.items():
         categories = returned.get(row_id)
