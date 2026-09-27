@@ -1,0 +1,48 @@
+# Lint, types, tests and the offline eval replay on every push and PR.
+# No secrets and no API keys: no step can call a real model. Tests stub
+# call_model, and the eval replays from the committed cache (--offline
+# fails on any cache miss instead of calling the model).
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"  # same as ./venv
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Ruff
+        run: ruff check .
+
+      - name: Mypy
+        run: mypy afw
+
+      - name: Tests (including the committed gold set and eval replay)
+        run: python -m pytest -q
+
+      - name: Eval replay (offline, from the committed cache)
+        run: |
+          python eval/run_eval.py --version v1 --offline
+          python eval/run_eval.py --version v2 --offline
+          python eval/run_eval.py --compare
+
+      - name: Eval results match the committed files
+        run: git diff --exit-code -- eval/RESULTS.md eval/results/

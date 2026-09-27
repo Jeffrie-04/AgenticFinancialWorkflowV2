@@ -59,6 +59,18 @@ python run.py
 
 Individual stages can also be run on their own (e.g. `python phase3_kpisnoAI.py`). Tests: `python -m pytest tests/ -v`.
 
+## CI
+
+Every push and pull request runs `ruff check .`, `mypy afw` and `pytest -q` in GitHub Actions (`.github/workflows/ci.yml`, Python 3.12), then replays the eval offline and fails if `eval/RESULTS.md` or `eval/results/` would change. CI has no secrets and never calls a model: the eval replays from the committed cache in `eval/cache/`, and `--offline` stops on any cache miss.
+
+To refresh the eval after a prompt, gold-set or model change, run it without `--offline` (this calls the model), then commit the new `eval/cache/`, `eval/results/` and `eval/RESULTS.md`:
+
+```bash
+./venv/bin/python eval/run_eval.py --version v1
+./venv/bin/python eval/run_eval.py --version v2
+./venv/bin/python eval/run_eval.py --compare
+```
+
 ## Limitations & roadmap
 
 Current limitations: the analysis covers a single time period (no trend detection yet), "runway" can't be computed without a starting cash balance, the sample dataset is small, and input is currently a clean CSV rather than the bank/credit-card statements a real business would more likely have.
