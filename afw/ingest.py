@@ -52,6 +52,7 @@ SOURCE_CONFIGS = {
     "landscaper": SourceConfig(),
     "law_firm": SourceConfig(),
     "restaurant": SourceConfig(),
+    "consultant": SourceConfig(),
 }
 
 
