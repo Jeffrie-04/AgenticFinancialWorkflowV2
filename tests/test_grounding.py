@@ -93,7 +93,7 @@ def test_numbers_match_at_the_precision_shown(text):
 @pytest.mark.parametrize("text,bad", [
     ("Income was $58,860.01.", "$58,860.01"),  # not the KPI at the precision shown
     ("Utilities were 51.2% of spend.", "51.2%"),
-    ("Income was $48.1k.", "$48.1"),            # abbreviations are not parsed
+    ("Income was $48.1k.", "$48.1k"),           # abbreviations are unsupported as a whole
     ("Spend grew 51.1 dollars.", "$51.1"),      # money must match a money KPI
     ("There were 2 new clients.", "2"),         # not a KPI, not structural
     ("In October 2024.", "2024"),               # dates aren't KPIs
@@ -166,6 +166,8 @@ EDGE_KPIS = {
     "nothing": kpis_from([]),
     "digit_names": kpis_from([row("Studio 54 LLC", "5400.00", "CREDIT", "Income"),
                               row("7-Eleven", "7.11", "DEBIT", "Dining")]),
+    "numeric_names": kpis_from([row("58", "58860.00", "CREDIT", "Income"),
+                                row("999", "999.00", "DEBIT", "Shopping")]),
 }
 ALL_KPIS = {**{b: kpis_of(b) for b in BUSINESSES}, **EDGE_KPIS}
 
@@ -242,4 +244,69 @@ def test_model_text_copying_display_values_passes():
             "Utilities took $24,609.00 (51.1%), Shopping $19,801.80 (41.1%), Other $3,348.15 (7.0%) "
             "and Dining $388.30 (0.8%). The top client provided 21.2% and the top clients 48.6% "
             "across 10 income sources; average expense $1,504.60, daily $1,719.54.")
+    assert check_grounding(text, LANDSCAPER).ok, check_grounding(text, LANDSCAPER).unsupported
+
+
+# ---------------------------------------------- review hardening (Codex)
+
+NUMERIC_MERCHANTS = {**LANDSCAPER, "top_merchants": ["999", "58", "Shell Gas"]}
+
+
+def test_a_numeric_merchant_name_does_not_hide_a_number():
+    assert check_grounding("Spend was $999.", NUMERIC_MERCHANTS).unsupported == ["$999"]
+
+
+def test_digits_inside_a_number_are_never_stripped_as_a_name():
+    assert check_grounding("Income was $58,860.00.", NUMERIC_MERCHANTS).ok
+
+
+def test_numeric_name_standing_alone_is_still_a_name():
+    assert check_grounding("The top merchant was 999, then 58.", NUMERIC_MERCHANTS).ok
+
+
+def test_unbounded_precision_is_unsupported_not_an_exception():
+    text = "Income was $58,860.000000000000000000000000000000."
+    assert check_grounding(text, LANDSCAPER).unsupported == ["$58,860.000000000000000000000000000000"]
+
+
+def test_precision_is_bounded_at_six_decimals():
+    assert check_grounding("Income was $58,860.000000.", LANDSCAPER).ok  # 6 decimals: still the KPI
+    assert check_grounding("Income was $58,860.0000000.", LANDSCAPER).unsupported == ["$58,860.0000000"]
+
+
+def test_a_number_too_large_to_round_is_unsupported_not_an_exception():
+    huge = "9" * 40
+    assert check_grounding(f"Spend was ${huge}.", LANDSCAPER).unsupported == [f"${huge}"]
+
+
+@pytest.mark.parametrize("text,token", [
+    ("Income was $100k.", "$100k"),
+    ("Income was $58,860thousand.", "$58,860thousand"),
+    ("Income was 58,860million.", "58,860million"),
+    ("It was the 3rd month.", "3rd"),
+])
+def test_number_followed_by_letters_is_unsupported_as_a_whole(text, token):
+    assert check_grounding(text, LANDSCAPER).unsupported == [token]
+
+
+def test_an_explicit_sign_must_match_the_kpi_sign():
+    assert check_grounding("Income was -$58,860.00.", LANDSCAPER).unsupported == ["-$58,860.00"]
+
+
+@pytest.mark.parametrize("text", ["a deficit of $2,204.05", "net cash flow of -$2,204.05",
+                                  "net cash flow of \u2212$2,204.05"])
+def test_negative_kpi_matches_unsigned_magnitude_or_written_sign(text):
+    assert check_grounding(text, kpis_of("restaurant")).ok
+
+
+def test_ranges_are_not_signs():
+    # "2-3": the "-" belongs to the range, so 3 is unsigned (and structural).
+    assert check_grounding("Sign 2-3 clients.", LANDSCAPER).unsupported == ["2"]
+
+
+@pytest.mark.parametrize("text", ["Utilities were 51.1 per cent of spend.",
+                                  "Utilities were 51.1  per   cent of spend.",
+                                  "Utilities were 51.1\u00a0per\u00a0cent of spend.",
+                                  "Utilities were 51.1\u00a0%."])
+def test_whitespace_is_collapsed_before_extraction(text):
     assert check_grounding(text, LANDSCAPER).ok, check_grounding(text, LANDSCAPER).unsupported

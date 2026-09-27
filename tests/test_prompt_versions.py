@@ -158,3 +158,17 @@ def test_travel_reply_is_accepted_under_v2():
 def test_v2_repair_text_lists_travel():
     assert cat_mod.problem_text("llm_invalid_category", "v2") == \
         f"category is not one of: Utilities, Shopping, Dining, {TRAVEL}, Other"
+
+
+
+def test_v2_retry_after_malformed_reply_stays_on_v2():
+    prompts = []
+    replies = ["Sorry, not JSON.", json.dumps({"categorized": [{"id": "d1", "category": TRAVEL}]})]
+
+    def call(prompt):
+        prompts.append(prompt)
+        return replies.pop(0)
+    accepted, failures, counts, error = cat_mod.categorize(ROW, version="v2", call=call)
+    assert (accepted, failures, error) == ({"d1": TRAVEL}, {}, None)
+    assert counts["calls"] == 2
+    assert f"Dining, {TRAVEL}, Other" in prompts[1]  # the repair prompt is the v2 prompt

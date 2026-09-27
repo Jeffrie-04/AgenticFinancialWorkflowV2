@@ -18,6 +18,7 @@ from afw.guards.grounding import (
     FALLBACK_REFLECTION_MARKER,
     FALLBACK_SUMMARY_MARKER,
     check_grounding,
+    fallback_reflection,
     fallback_summary,
 )
 from afw.narrative import COPY_EXACTLY, grounded_text
@@ -236,3 +237,31 @@ def test_reflection_prompt_steps_are_unnumbered_bullets(outputs, monkeypatch):
                  "- Give specific, actionable recommendations tied to those observations —"):
         assert step in prompt
     assert "Keep the response under 150 words." in prompt  # word limit kept
+
+
+# ---------------------------------------------- review hardening (Codex)
+
+
+def test_zero_width_only_reply_regenerates_then_falls_back():
+    call, prompts = scripted("\u200b", "\u200b\ufeff ")
+    text, outcome, rejected = grounded_text("PROMPT", KPIS, fallback_summary, call)
+    assert len(prompts) == 2
+    assert outcome["status"] == "fallback"
+    assert [r["text"] for r in rejected] == ["", ""]
+    assert text == fallback_summary(KPIS)
+
+
+def test_an_ungrounded_fallback_is_flagged():
+    call, _ = scripted("Made up 12%.", "Made up 13%.")
+    text, outcome, _ = grounded_text("PROMPT", KPIS, lambda kpis: "Fallback with 99%.", call)
+    assert text == "Fallback with 99%."
+    assert outcome["status"] == "fallback_ungrounded"
+
+
+def test_real_fallbacks_are_never_flagged_ungrounded():
+    from tests.test_grounding import ALL_KPIS
+    for name, kpis in ALL_KPIS.items():
+        for fallback in (fallback_summary, fallback_reflection):
+            call, _ = scripted("Made up 12%.", "Made up 13%.")
+            _, outcome, _ = grounded_text("PROMPT", kpis, fallback, call)
+            assert outcome["status"] == "fallback", (name, fallback.__name__)

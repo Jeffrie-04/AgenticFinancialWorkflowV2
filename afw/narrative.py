@@ -14,7 +14,7 @@ import json
 import os
 
 from afw.guards.grounding import check_grounding
-from afw.guards.pii import mask_pii, mask_strings
+from afw.guards.pii import mask_pii, mask_strings, strip_format_characters
 
 # Added to the summary and reflection prompts.
 COPY_EXACTLY = "Copy numbers and names exactly as they appear in the KPIs; don't round, sum, compute or shorten."
@@ -23,8 +23,9 @@ REGENERATE = ("Your previous text used numbers that are not in the KPIs: {number
 
 
 def _check(reply, prompt_kpis):
-    """-> (text, unsupported tokens, ok). An empty or non-text reply fails."""
-    text = reply.strip() if isinstance(reply, str) else ""
+    """-> (text, unsupported tokens, ok). Invisible format characters are
+    removed first, so an empty, invisible-only or non-text reply fails."""
+    text = strip_format_characters(reply).strip() if isinstance(reply, str) else ""
     result = check_grounding(text, prompt_kpis)
     return text, result.unsupported, bool(text) and result.ok
 
@@ -48,7 +49,10 @@ def grounded_text(prompt, kpis, fallback, call):
     if ok:
         return text, {"status": "regenerated", "attempts": 2, "unsupported": unsupported}, rejected
     rejected.append({"attempt": 2, "text": text, "unsupported": retry_unsupported})
-    return fallback(kpis), {"status": "fallback", "attempts": 2, "unsupported": retry_unsupported}, rejected
+    # The fallback is grounded by construction; recheck anyway and flag it if not.
+    text = fallback(kpis)
+    status = "fallback" if check_grounding(text, kpis).ok else "fallback_ungrounded"
+    return text, {"status": status, "attempts": 2, "unsupported": retry_unsupported}, rejected
 
 
 def _update_json(path, update):

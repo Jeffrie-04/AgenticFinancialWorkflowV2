@@ -45,12 +45,12 @@ def _last_four(match):
     return "****" + digits[-4:]
 
 
-def _strip_format_characters(text):
+def strip_format_characters(text):
     return "".join(ch for ch in text if unicodedata.category(ch) != "Cf")
 
 
 def mask_pii(text):
-    text = _strip_format_characters(text)
+    text = strip_format_characters(text)
     text = WHITESPACE_RUN.sub(" ", text)
     text = EMAIL.sub("[EMAIL]", text)
     text = PHONE.sub("[PHONE]", text)
