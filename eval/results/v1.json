@@ -3,19 +3,19 @@
   "provider": "anthropic_direct",
   "model": "claude-haiku-4-5",
   "endpoint": "default",
-  "gold_sha256": "f7f6888c7c7f1f8d2faf952c0b6d8ebc05bd2f423c32e7b8847734c1683059d5",
+  "gold_sha256": "588958b144ab57dce3014f392aad28d8deee4d2e511112e10fe773f9359d0789",
   "labeled": 142,
   "unlabeled": 0,
-  "correct": 134,
-  "accuracy": 0.9436619718309859,
+  "correct": 135,
+  "accuracy": 0.9507042253521126,
   "answered": 142,
-  "answered_accuracy": 0.9436619718309859,
+  "answered_accuracy": 0.9507042253521126,
   "review_counts": {},
   "per_category": {
     "Utilities": {
-      "support": 50,
+      "support": 49,
       "correct": 47,
-      "accuracy": 0.94
+      "accuracy": 0.9591836734693877
     },
     "Shopping": {
       "support": 36,
@@ -28,15 +28,15 @@
       "accuracy": 1.0
     },
     "Other": {
-      "support": 44,
-      "correct": 42,
-      "accuracy": 0.9545454545454546
+      "support": 45,
+      "correct": 43,
+      "accuracy": 0.9555555555555556
     }
   },
   "confusion": {
     "Utilities": {
       "Utilities": 47,
-      "Other": 3
+      "Other": 2
     },
     "Shopping": {
       "Shopping": 33,
@@ -47,7 +47,7 @@
       "Dining": 12
     },
     "Other": {
-      "Other": 42,
+      "Other": 43,
       "Utilities": 2
     }
   },
@@ -715,8 +715,8 @@
       "id": "f7e798cbcc46b061-0",
       "business": "restaurant",
       "merchant": "Waste Management",
-      "label": "Utilities",
-      "scored_label": "Utilities",
+      "label": "Other",
+      "scored_label": "Other",
       "predicted": "Other"
     },
     {

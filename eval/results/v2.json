@@ -3,19 +3,19 @@
   "provider": "anthropic_direct",
   "model": "claude-haiku-4-5",
   "endpoint": "default",
-  "gold_sha256": "f7f6888c7c7f1f8d2faf952c0b6d8ebc05bd2f423c32e7b8847734c1683059d5",
+  "gold_sha256": "588958b144ab57dce3014f392aad28d8deee4d2e511112e10fe773f9359d0789",
   "labeled": 142,
   "unlabeled": 0,
-  "correct": 135,
-  "accuracy": 0.9507042253521126,
+  "correct": 136,
+  "accuracy": 0.9577464788732394,
   "answered": 142,
-  "answered_accuracy": 0.9507042253521126,
+  "answered_accuracy": 0.9577464788732394,
   "review_counts": {},
   "per_category": {
     "Utilities": {
-      "support": 50,
+      "support": 49,
       "correct": 47,
-      "accuracy": 0.94
+      "accuracy": 0.9591836734693877
     },
     "Shopping": {
       "support": 36,
@@ -33,15 +33,15 @@
       "accuracy": 0.972972972972973
     },
     "Other": {
-      "support": 7,
-      "correct": 7,
+      "support": 8,
+      "correct": 8,
       "accuracy": 1.0
     }
   },
   "confusion": {
     "Utilities": {
       "Utilities": 47,
-      "Other": 3
+      "Other": 2
     },
     "Shopping": {
       "Shopping": 33,
@@ -57,7 +57,7 @@
       "Utilities": 1
     },
     "Other": {
-      "Other": 7
+      "Other": 8
     }
   },
   "travel": {
@@ -731,8 +731,8 @@
       "id": "f7e798cbcc46b061-0",
       "business": "restaurant",
       "merchant": "Waste Management",
-      "label": "Utilities",
-      "scored_label": "Utilities",
+      "label": "Other",
+      "scored_label": "Other",
       "predicted": "Other"
     },
     {
