@@ -3,29 +3,29 @@
   "provider": "anthropic_direct",
   "model": "claude-haiku-4-5",
   "endpoint": "default",
-  "gold_sha256": "f7f6888c7c7f1f8d2faf952c0b6d8ebc05bd2f423c32e7b8847734c1683059d5",
+  "gold_sha256": "b35386c6a4c3528f18cc74ecc72d26b6e0099c65a95abed1494bb471371c608d",
   "labeled": 142,
   "unlabeled": 0,
-  "correct": 135,
-  "accuracy": 0.9507042253521126,
+  "correct": 117,
+  "accuracy": 0.823943661971831,
   "answered": 142,
-  "answered_accuracy": 0.9507042253521126,
+  "answered_accuracy": 0.823943661971831,
   "review_counts": {},
   "per_category": {
     "Utilities": {
-      "support": 50,
-      "correct": 47,
-      "accuracy": 0.94
+      "support": 48,
+      "correct": 40,
+      "accuracy": 0.8333333333333334
     },
     "Shopping": {
-      "support": 36,
-      "correct": 33,
-      "accuracy": 0.9166666666666666
+      "support": 26,
+      "correct": 23,
+      "accuracy": 0.8846153846153846
     },
     "Dining": {
-      "support": 12,
+      "support": 18,
       "correct": 12,
-      "accuracy": 1.0
+      "accuracy": 0.6666666666666666
     },
     "Travel/Transportation": {
       "support": 37,
@@ -33,31 +33,34 @@
       "accuracy": 0.972972972972973
     },
     "Other": {
-      "support": 7,
-      "correct": 7,
-      "accuracy": 1.0
+      "support": 13,
+      "correct": 6,
+      "accuracy": 0.46153846153846156
     }
   },
   "confusion": {
     "Utilities": {
-      "Utilities": 47,
-      "Other": 3
+      "Utilities": 40,
+      "Other": 4,
+      "Shopping": 4
     },
     "Shopping": {
-      "Shopping": 33,
+      "Shopping": 23,
       "Dining": 1,
       "Utilities": 1,
       "Other": 1
     },
     "Dining": {
-      "Dining": 12
+      "Dining": 12,
+      "Shopping": 6
     },
     "Travel/Transportation": {
       "Travel/Transportation": 36,
       "Utilities": 1
     },
     "Other": {
-      "Other": 7
+      "Utilities": 7,
+      "Other": 6
     }
   },
   "travel": {
@@ -68,8 +71,8 @@
     "gold": 37,
     "true_positive": 36
   },
-  "calls": 0,
-  "cache_hits": 4,
+  "calls": 4,
+  "cache_hits": 0,
   "rows": [
     {
       "id": "be4a2c922d4ddc6f-0",
@@ -203,16 +206,16 @@
       "id": "0b435527a3340557-0",
       "business": "landscaper",
       "merchant": "Gusto Payroll",
-      "label": "Utilities",
-      "scored_label": "Utilities",
+      "label": "Other",
+      "scored_label": "Other",
       "predicted": "Utilities"
     },
     {
       "id": "82c038b49ac6ca85-0",
       "business": "landscaper",
       "merchant": "Gusto Payroll",
-      "label": "Utilities",
-      "scored_label": "Utilities",
+      "label": "Other",
+      "scored_label": "Other",
       "predicted": "Utilities"
     },
     {
@@ -243,8 +246,8 @@
       "id": "1fc48ac41e22e0c4-0",
       "business": "landscaper",
       "merchant": "County Landfill",
-      "label": "Other",
-      "scored_label": "Other",
+      "label": "Utilities",
+      "scored_label": "Utilities",
       "predicted": "Other"
     },
     {
@@ -435,16 +438,16 @@
       "id": "740bf2d28738ad46-0",
       "business": "law_firm",
       "merchant": "Certified Court Reporting",
-      "label": "Utilities",
-      "scored_label": "Utilities",
+      "label": "Other",
+      "scored_label": "Other",
       "predicted": "Utilities"
     },
     {
       "id": "0f8337fc3966e2c7-0",
       "business": "law_firm",
       "merchant": "Expert Witness Retainer",
-      "label": "Utilities",
-      "scored_label": "Utilities",
+      "label": "Other",
+      "scored_label": "Other",
       "predicted": "Utilities"
     },
     {
@@ -571,48 +574,48 @@
       "id": "b7d84e793e9a862a-0",
       "business": "restaurant",
       "merchant": "Sysco Foods",
-      "label": "Shopping",
-      "scored_label": "Shopping",
+      "label": "Utilities",
+      "scored_label": "Utilities",
       "predicted": "Shopping"
     },
     {
       "id": "f5e608da800f1a96-0",
       "business": "restaurant",
       "merchant": "Sysco Foods",
-      "label": "Shopping",
-      "scored_label": "Shopping",
+      "label": "Utilities",
+      "scored_label": "Utilities",
       "predicted": "Shopping"
     },
     {
       "id": "c47b06ca8cd65d11-0",
       "business": "restaurant",
       "merchant": "Sysco Foods",
-      "label": "Shopping",
-      "scored_label": "Shopping",
+      "label": "Utilities",
+      "scored_label": "Utilities",
       "predicted": "Shopping"
     },
     {
       "id": "0c0a1ccb962fc250-0",
       "business": "restaurant",
       "merchant": "Sysco Foods",
-      "label": "Shopping",
-      "scored_label": "Shopping",
+      "label": "Utilities",
+      "scored_label": "Utilities",
       "predicted": "Shopping"
     },
     {
       "id": "e8dc2ba58296b80f-0",
       "business": "restaurant",
       "merchant": "US Foods",
-      "label": "Shopping",
-      "scored_label": "Shopping",
+      "label": "Dining",
+      "scored_label": "Dining",
       "predicted": "Shopping"
     },
     {
       "id": "7c4a824f495cdf76-0",
       "business": "restaurant",
       "merchant": "US Foods",
-      "label": "Shopping",
-      "scored_label": "Shopping",
+      "label": "Dining",
+      "scored_label": "Dining",
       "predicted": "Shopping"
     },
     {
@@ -635,48 +638,48 @@
       "id": "ee04ee1a2bf303e0-0",
       "business": "restaurant",
       "merchant": "Local Seafood Co",
-      "label": "Shopping",
-      "scored_label": "Shopping",
+      "label": "Dining",
+      "scored_label": "Dining",
       "predicted": "Shopping"
     },
     {
       "id": "5435fbda949e399a-0",
       "business": "restaurant",
       "merchant": "Local Seafood Co",
-      "label": "Shopping",
-      "scored_label": "Shopping",
+      "label": "Dining",
+      "scored_label": "Dining",
       "predicted": "Shopping"
     },
     {
       "id": "441dd5cbe0a3436c-0",
       "business": "restaurant",
       "merchant": "Craft Beverage Distributor",
-      "label": "Shopping",
-      "scored_label": "Shopping",
+      "label": "Dining",
+      "scored_label": "Dining",
       "predicted": "Shopping"
     },
     {
       "id": "9170eec618d4bcfd-0",
       "business": "restaurant",
       "merchant": "Craft Beverage Distributor",
-      "label": "Shopping",
-      "scored_label": "Shopping",
+      "label": "Dining",
+      "scored_label": "Dining",
       "predicted": "Shopping"
     },
     {
       "id": "2c98f0aebf148017-0",
       "business": "restaurant",
       "merchant": "Gusto Payroll",
-      "label": "Utilities",
-      "scored_label": "Utilities",
+      "label": "Other",
+      "scored_label": "Other",
       "predicted": "Utilities"
     },
     {
       "id": "efe54f25675ed74f-0",
       "business": "restaurant",
       "merchant": "Gusto Payroll",
-      "label": "Utilities",
-      "scored_label": "Utilities",
+      "label": "Other",
+      "scored_label": "Other",
       "predicted": "Utilities"
     },
     {
@@ -1195,8 +1198,8 @@
       "id": "32c58c55031a4e9f-0",
       "business": "consultant",
       "merchant": "Brightline Consulting Partners",
-      "label": "Utilities",
-      "scored_label": "Utilities",
+      "label": "Other",
+      "scored_label": "Other",
       "predicted": "Utilities"
     },
     {

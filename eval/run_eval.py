@@ -181,13 +181,12 @@ def _pct(value):
     return "—" if value is None else f"{value * 100:.1f}%"
 
 
-def results_markdown(v1, v2):
+def _comparison(v1, v2, level="##"):
+    """The summary bullets, metrics table and per-category table for one v1/v2 pair."""
     if v1["gold_sha256"] != v2["gold_sha256"]:
         raise SystemExit("v1 and v2 were scored on different gold sets; re-run both on the same file")
     t1, t2 = v1["travel"] or {}, v2["travel"] or {}
     lines = [
-        "# Categorizer eval: v1 vs v2",
-        "",
         (f"- Gold set: `eval/gold_set.csv`, sha256 `{v2['gold_sha256']}`, {v2['labeled']} labeled purchases"
          f" ({v2['unlabeled']} unlabeled, skipped)."),
         (f"- Model: {v1['provider']} / {v1['model']} @ {v1['endpoint']} (v1), "
@@ -207,7 +206,7 @@ def results_markdown(v1, v2):
         f"| {TRAVEL} recall | {_pct(t1.get('recall'))} | {_pct(t2.get('recall'))} |",
         f"| {TRAVEL} F1 | {_pct(t1.get('f1'))} | {_pct(t2.get('f1'))} |",
         "",
-        "## Per-category accuracy (recall on gold labels)",
+        f"{level} Per-category accuracy (recall on gold labels)",
         "",
         "| Category | v1 | v2 |",
         "|---|---|---|",
@@ -218,6 +217,19 @@ def results_markdown(v1, v2):
             stats = result["per_category"].get(category)
             cells.append("—" if not stats else f"{_pct(stats['accuracy'])} ({stats['correct']}/{stats['support']})")
         lines.append(f"| {category} | {cells[0]} | {cells[1]} |")
+    return lines
+
+
+def results_markdown(v1, v2, before=None, note=None):
+    """RESULTS.md: the current v1/v2 comparison; optionally the same scores
+    with the original labels (`before`, a v1/v2 pair) and an audit note."""
+    lines = ["# Categorizer eval: v1 vs v2", "", *_comparison(v1, v2)]
+    if before:
+        lines += ["", "## With the original labels", "",
+                  "The same model replies, scored against the gold set as first labeled:", "",
+                  *_comparison(*before, level="###")]
+    if note:
+        lines += ["", "## Label audit", "", note.strip()]
     return "\n".join(lines) + "\n"
 
 
@@ -233,12 +245,22 @@ def main(argv=None, call=None, cache_dir=DEFAULT_CACHE, results_dir=DEFAULT_RESU
     args = parser.parse_args(argv)
 
     if args.compare:
-        results = []
-        for version in ("v1", "v2"):
-            with open(os.path.join(results_dir, f"{version}.json")) as f:
-                results.append(json.load(f))
+        def load_pair(directory):
+            pair = []
+            for version in ("v1", "v2"):
+                with open(os.path.join(directory, f"{version}.json")) as f:
+                    pair.append(json.load(f))
+            return pair
+
+        original = os.path.join(results_dir, "original_labels")
+        before = load_pair(original) if os.path.exists(os.path.join(original, "v2.json")) else None
+        note_path = os.path.join(results_dir, "label_audit.md")
+        note = None
+        if os.path.exists(note_path):
+            with open(note_path, encoding="utf-8") as f:
+                note = f.read()
         with open(results_md, "w", encoding="utf-8") as f:
-            f.write(results_markdown(*results))
+            f.write(results_markdown(*load_pair(results_dir), before=before, note=note))
         print(f"Wrote {results_md}")
         return
     if not args.version:

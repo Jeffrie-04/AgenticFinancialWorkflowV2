@@ -1,123 +1,109 @@
 {
-  "version": "v2",
+  "version": "v1",
   "provider": "anthropic_direct",
   "model": "claude-haiku-4-5",
   "endpoint": "default",
-  "gold_sha256": "f7f6888c7c7f1f8d2faf952c0b6d8ebc05bd2f423c32e7b8847734c1683059d5",
+  "gold_sha256": "b35386c6a4c3528f18cc74ecc72d26b6e0099c65a95abed1494bb471371c608d",
   "labeled": 142,
   "unlabeled": 0,
-  "correct": 135,
-  "accuracy": 0.9507042253521126,
+  "correct": 116,
+  "accuracy": 0.8169014084507042,
   "answered": 142,
-  "answered_accuracy": 0.9507042253521126,
+  "answered_accuracy": 0.8169014084507042,
   "review_counts": {},
   "per_category": {
     "Utilities": {
-      "support": 50,
-      "correct": 47,
-      "accuracy": 0.94
+      "support": 48,
+      "correct": 40,
+      "accuracy": 0.8333333333333334
     },
     "Shopping": {
-      "support": 36,
-      "correct": 33,
-      "accuracy": 0.9166666666666666
+      "support": 26,
+      "correct": 23,
+      "accuracy": 0.8846153846153846
     },
     "Dining": {
-      "support": 12,
+      "support": 18,
       "correct": 12,
-      "accuracy": 1.0
-    },
-    "Travel/Transportation": {
-      "support": 37,
-      "correct": 36,
-      "accuracy": 0.972972972972973
+      "accuracy": 0.6666666666666666
     },
     "Other": {
-      "support": 7,
-      "correct": 7,
-      "accuracy": 1.0
+      "support": 50,
+      "correct": 41,
+      "accuracy": 0.82
     }
   },
   "confusion": {
     "Utilities": {
-      "Utilities": 47,
-      "Other": 3
+      "Utilities": 40,
+      "Other": 4,
+      "Shopping": 4
     },
     "Shopping": {
-      "Shopping": 33,
-      "Dining": 1,
-      "Utilities": 1,
-      "Other": 1
-    },
-    "Dining": {
-      "Dining": 12
-    },
-    "Travel/Transportation": {
-      "Travel/Transportation": 36,
+      "Shopping": 23,
+      "Other": 2,
       "Utilities": 1
     },
+    "Dining": {
+      "Dining": 12,
+      "Shopping": 6
+    },
     "Other": {
-      "Other": 7
+      "Other": 41,
+      "Utilities": 9
     }
   },
-  "travel": {
-    "precision": 1.0,
-    "recall": 0.972972972972973,
-    "f1": 0.9863013698630136,
-    "predicted": 36,
-    "gold": 37,
-    "true_positive": 36
-  },
-  "calls": 0,
-  "cache_hits": 4,
+  "travel": null,
+  "calls": 4,
+  "cache_hits": 0,
   "rows": [
     {
       "id": "be4a2c922d4ddc6f-0",
       "business": "landscaper",
       "merchant": "Shell Gas",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "9609964209c56c42-0",
       "business": "landscaper",
       "merchant": "Shell Gas",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "77cd9bff54b3264e-0",
       "business": "landscaper",
       "merchant": "BP Gas",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "125b24abe9786f4d-0",
       "business": "landscaper",
       "merchant": "Shell Gas",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "6a0afd1503603471-0",
       "business": "landscaper",
       "merchant": "Wawa Fuel",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "66a712ab6b55a3e4-0",
       "business": "landscaper",
       "merchant": "Wawa Fuel",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "0b3cadce8e5b657f-0",
@@ -203,16 +189,16 @@
       "id": "0b435527a3340557-0",
       "business": "landscaper",
       "merchant": "Gusto Payroll",
-      "label": "Utilities",
-      "scored_label": "Utilities",
+      "label": "Other",
+      "scored_label": "Other",
       "predicted": "Utilities"
     },
     {
       "id": "82c038b49ac6ca85-0",
       "business": "landscaper",
       "merchant": "Gusto Payroll",
-      "label": "Utilities",
-      "scored_label": "Utilities",
+      "label": "Other",
+      "scored_label": "Other",
       "predicted": "Utilities"
     },
     {
@@ -236,15 +222,15 @@
       "business": "landscaper",
       "merchant": "Truck Lease Payment",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
+      "scored_label": "Other",
       "predicted": "Utilities"
     },
     {
       "id": "1fc48ac41e22e0c4-0",
       "business": "landscaper",
       "merchant": "County Landfill",
-      "label": "Other",
-      "scored_label": "Other",
+      "label": "Utilities",
+      "scored_label": "Utilities",
       "predicted": "Other"
     },
     {
@@ -435,16 +421,16 @@
       "id": "740bf2d28738ad46-0",
       "business": "law_firm",
       "merchant": "Certified Court Reporting",
-      "label": "Utilities",
-      "scored_label": "Utilities",
+      "label": "Other",
+      "scored_label": "Other",
       "predicted": "Utilities"
     },
     {
       "id": "0f8337fc3966e2c7-0",
       "business": "law_firm",
       "merchant": "Expert Witness Retainer",
-      "label": "Utilities",
-      "scored_label": "Utilities",
+      "label": "Other",
+      "scored_label": "Other",
       "predicted": "Utilities"
     },
     {
@@ -540,8 +526,8 @@
       "business": "law_firm",
       "merchant": "Uber",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "719d824983fc9ddf-0",
@@ -557,62 +543,62 @@
       "merchant": "LegalZoom Filing",
       "label": "Other",
       "scored_label": "Other",
-      "predicted": "Other"
+      "predicted": "Utilities"
     },
     {
       "id": "b6cb394c69b15fb5-0",
       "business": "law_firm",
       "merchant": "Parking Garage",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "b7d84e793e9a862a-0",
       "business": "restaurant",
       "merchant": "Sysco Foods",
-      "label": "Shopping",
-      "scored_label": "Shopping",
+      "label": "Utilities",
+      "scored_label": "Utilities",
       "predicted": "Shopping"
     },
     {
       "id": "f5e608da800f1a96-0",
       "business": "restaurant",
       "merchant": "Sysco Foods",
-      "label": "Shopping",
-      "scored_label": "Shopping",
+      "label": "Utilities",
+      "scored_label": "Utilities",
       "predicted": "Shopping"
     },
     {
       "id": "c47b06ca8cd65d11-0",
       "business": "restaurant",
       "merchant": "Sysco Foods",
-      "label": "Shopping",
-      "scored_label": "Shopping",
+      "label": "Utilities",
+      "scored_label": "Utilities",
       "predicted": "Shopping"
     },
     {
       "id": "0c0a1ccb962fc250-0",
       "business": "restaurant",
       "merchant": "Sysco Foods",
-      "label": "Shopping",
-      "scored_label": "Shopping",
+      "label": "Utilities",
+      "scored_label": "Utilities",
       "predicted": "Shopping"
     },
     {
       "id": "e8dc2ba58296b80f-0",
       "business": "restaurant",
       "merchant": "US Foods",
-      "label": "Shopping",
-      "scored_label": "Shopping",
+      "label": "Dining",
+      "scored_label": "Dining",
       "predicted": "Shopping"
     },
     {
       "id": "7c4a824f495cdf76-0",
       "business": "restaurant",
       "merchant": "US Foods",
-      "label": "Shopping",
-      "scored_label": "Shopping",
+      "label": "Dining",
+      "scored_label": "Dining",
       "predicted": "Shopping"
     },
     {
@@ -635,48 +621,48 @@
       "id": "ee04ee1a2bf303e0-0",
       "business": "restaurant",
       "merchant": "Local Seafood Co",
-      "label": "Shopping",
-      "scored_label": "Shopping",
+      "label": "Dining",
+      "scored_label": "Dining",
       "predicted": "Shopping"
     },
     {
       "id": "5435fbda949e399a-0",
       "business": "restaurant",
       "merchant": "Local Seafood Co",
-      "label": "Shopping",
-      "scored_label": "Shopping",
+      "label": "Dining",
+      "scored_label": "Dining",
       "predicted": "Shopping"
     },
     {
       "id": "441dd5cbe0a3436c-0",
       "business": "restaurant",
       "merchant": "Craft Beverage Distributor",
-      "label": "Shopping",
-      "scored_label": "Shopping",
+      "label": "Dining",
+      "scored_label": "Dining",
       "predicted": "Shopping"
     },
     {
       "id": "9170eec618d4bcfd-0",
       "business": "restaurant",
       "merchant": "Craft Beverage Distributor",
-      "label": "Shopping",
-      "scored_label": "Shopping",
+      "label": "Dining",
+      "scored_label": "Dining",
       "predicted": "Shopping"
     },
     {
       "id": "2c98f0aebf148017-0",
       "business": "restaurant",
       "merchant": "Gusto Payroll",
-      "label": "Utilities",
-      "scored_label": "Utilities",
+      "label": "Other",
+      "scored_label": "Other",
       "predicted": "Utilities"
     },
     {
       "id": "efe54f25675ed74f-0",
       "business": "restaurant",
       "merchant": "Gusto Payroll",
-      "label": "Utilities",
-      "scored_label": "Utilities",
+      "label": "Other",
+      "scored_label": "Other",
       "predicted": "Utilities"
     },
     {
@@ -797,7 +783,7 @@
       "merchant": "Competitor Restaurant",
       "label": "Shopping",
       "scored_label": "Shopping",
-      "predicted": "Dining"
+      "predicted": "Other"
     },
     {
       "id": "37ae592481495bff-0",
@@ -820,8 +806,8 @@
       "business": "restaurant",
       "merchant": "Shell Gas",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "d9695953dcd1842f-0",
@@ -836,8 +822,8 @@
       "business": "restaurant",
       "merchant": "Uber",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "1602fcc53cd6d3cb-0",
@@ -868,32 +854,32 @@
       "business": "consultant",
       "merchant": "Delta Air Lines",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "013d21c5a06fb333-0",
       "business": "consultant",
       "merchant": "Uber",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "f438d21ceb3a13e5-0",
       "business": "consultant",
       "merchant": "Marriott Marquis",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "4bcaa74292e6ee01-0",
       "business": "consultant",
       "merchant": "Marriott Marquis",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "01731925f11232eb-0",
@@ -908,40 +894,40 @@
       "business": "consultant",
       "merchant": "Lyft",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "0cff3a00b73299aa-0",
       "business": "consultant",
       "merchant": "ParkChicago",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "1488da11c5c5f698-0",
       "business": "consultant",
       "merchant": "Shell",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "1e79e2fbfe7ff7a1-0",
       "business": "consultant",
       "merchant": "Illinois Tollway I-PASS",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "7d953e7652ab0c1d-0",
       "business": "consultant",
       "merchant": "United Airlines",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "1eef76ad9dfc3b39-0",
@@ -964,16 +950,16 @@
       "business": "consultant",
       "merchant": "Airbnb",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "07d998032715af1f-0",
       "business": "consultant",
       "merchant": "Uber",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "5530b0ddb1b86e25-0",
@@ -996,16 +982,16 @@
       "business": "consultant",
       "merchant": "MBTA",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "de0a9fd491ab2b47-0",
       "business": "consultant",
       "merchant": "Uber",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "1bd43415a619abd2-0",
@@ -1028,8 +1014,8 @@
       "business": "consultant",
       "merchant": "ChargePoint",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "ab5ad64e7f8914ac-0",
@@ -1052,8 +1038,8 @@
       "business": "consultant",
       "merchant": "SpotHero",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "ec10c43f1c4b7d02-0",
@@ -1068,56 +1054,56 @@
       "business": "consultant",
       "merchant": "Southwest Airlines",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "d9c6d745c6ac97dd-0",
       "business": "consultant",
       "merchant": "Hampton Inn",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "75184a08df9ce250-0",
       "business": "consultant",
       "merchant": "Hampton Inn",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "4f707003bc2797f4-0",
       "business": "consultant",
       "merchant": "E-470 Toll Road",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "d0c9409b227d5928-0",
       "business": "consultant",
       "merchant": "Hertz",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "e3428a3d337e6e6f-0",
       "business": "consultant",
       "merchant": "Conoco",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "d30945b1c2b501c9-0",
       "business": "consultant",
       "merchant": "Southwest Airlines",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "c32c09933ddeef49-0",
@@ -1140,24 +1126,24 @@
       "business": "consultant",
       "merchant": "Tesla Supercharger",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "70e3340ad9ec84e1-0",
       "business": "consultant",
       "merchant": "Illinois Tollway I-PASS",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "e2a5eedd905f560c-0",
       "business": "consultant",
       "merchant": "Hilton Garden Inn",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     },
     {
       "id": "fcd26270859be140-0",
@@ -1195,8 +1181,8 @@
       "id": "32c58c55031a4e9f-0",
       "business": "consultant",
       "merchant": "Brightline Consulting Partners",
-      "label": "Utilities",
-      "scored_label": "Utilities",
+      "label": "Other",
+      "scored_label": "Other",
       "predicted": "Utilities"
     },
     {
@@ -1204,8 +1190,8 @@
       "business": "consultant",
       "merchant": "The Parking Spot",
       "label": "Travel/Transportation",
-      "scored_label": "Travel/Transportation",
-      "predicted": "Travel/Transportation"
+      "scored_label": "Other",
+      "predicted": "Other"
     }
   ],
   "generated_at": "2026-09-27"

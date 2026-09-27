@@ -331,3 +331,47 @@ def test_identity_never_includes_api_keys(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-secret-value")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-other-secret")
     assert not any("secret" in part for part in run_eval.model_identity())
+
+
+# ------------------------------------------------ before/after label correction
+
+
+def scored_pair(tmp_path, dirs, gold_rows, name):
+    gold = write_gold(tmp_path / f"{name}.csv", gold_rows)
+    answers = {"a1": TRAVEL, "a2": "Shopping", "a3": "Utilities", "b1": "Other", "b2": "Dining", "b3": "Other"}
+    return [run_eval.evaluate(gold, v, call=Model(dict(answers)), identity=IDENTITY, cache_dir=dirs["cache_dir"])
+            for v in ("v1", "v2")]
+
+
+def test_compare_shows_before_and_after_and_the_audit_note(tmp_path, dirs):
+    corrected = scored_pair(tmp_path, dirs, GOLD, "after")
+    original = scored_pair(tmp_path, dirs, [*GOLD[:5], ("b3", "beta", "FedEx", "Shipping", "27.45", "Shopping")],
+                           "before")
+    text = run_eval.results_markdown(*corrected, before=original, note="Labels were corrected by rule.")
+    after_part, before_part = text.split("## With the original labels", 1)
+    assert "| Overall accuracy | 83.3% | 83.3% |" in after_part           # corrected labels
+    assert "| Overall accuracy | 66.7% | 66.7% |" in before_part          # b3 was labeled Shopping
+    assert original[1]["gold_sha256"] in before_part and corrected[1]["gold_sha256"] in after_part
+    assert "## Label audit\n\nLabels were corrected by rule." in text
+
+
+def test_compare_cli_picks_up_original_labels_and_audit_note(tmp_path, dirs):
+    after = scored_pair(tmp_path, dirs, GOLD, "after")
+    before = scored_pair(tmp_path, dirs, GOLD, "before")
+    os.makedirs(os.path.join(dirs["results_dir"], "original_labels"))
+    for result, sub in ((after, ""), (before, "original_labels")):
+        for r in result:
+            with open(os.path.join(dirs["results_dir"], sub, f"{r['version']}.json"), "w") as f:
+                json.dump(r, f)
+    with open(os.path.join(dirs["results_dir"], "label_audit.md"), "w") as f:
+        f.write("Audit note.\n")
+    md = tmp_path / "RESULTS.md"
+    run_eval.main(["--compare"], results_md=str(md), **dirs)
+    text = md.read_text()
+    assert "## With the original labels" in text and "## Label audit\n\nAudit note." in text
+
+
+def test_compare_without_before_or_note_is_unchanged(tmp_path, dirs):
+    v1, v2 = scored_pair(tmp_path, dirs, GOLD, "only")
+    text = run_eval.results_markdown(v1, v2)
+    assert "original labels" not in text and "Label audit" not in text
