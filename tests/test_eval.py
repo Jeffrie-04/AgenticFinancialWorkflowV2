@@ -175,6 +175,59 @@ def test_cache_miss_calls_and_stores_then_rerun_is_free(tmp_path, dirs):
         {k: v for k, v in first.items() if k not in ("calls", "cache_hits")}
 
 
+def flaky_provider(monkeypatch, *outcomes):
+    """The real call_model (with its retries), its provider call replaced:
+    each outcome in turn is raised or returned. Nothing sleeps."""
+    import bedrock_client
+    sent = []
+
+    def provider(prompt):
+        outcome = outcomes[len(sent)]
+        sent.append(prompt)
+        if isinstance(outcome, BaseException):
+            raise outcome
+        return outcome
+    monkeypatch.setattr(bedrock_client, "MODEL_PROVIDER", "openai")
+    monkeypatch.setattr(bedrock_client, "_call_openai", provider)
+    monkeypatch.setattr(bedrock_client, "_sleep", lambda seconds: None)
+    return bedrock_client.call_model, sent
+
+
+def rate_limited():
+    import httpx2
+    import openai
+    request = httpx2.Request("POST", "https://stub.example/v1")
+    return openai.RateLimitError("rate limited", response=httpx2.Response(429, request=request), body=None)
+
+
+def test_cache_stores_only_the_final_reply_after_a_retry(tmp_path, monkeypatch):
+    call, sent = flaky_provider(monkeypatch, rate_limited(), "the reply")
+    stats = run_eval.Counter(calls=0, cache_hits=0)
+    cached = run_eval.cached(call, IDENTITY, str(tmp_path), stats)
+
+    assert cached("the prompt") == "the reply"
+    assert sent == ["the prompt", "the prompt"]  # retried inside call_model
+    assert stats["calls"] == 1                   # one call as the cache sees it
+    files = os.listdir(tmp_path)
+    assert len(files) == 1
+    assert (tmp_path / files[0]).read_text(encoding="utf-8") == "the reply"
+
+    assert cached("the prompt") == "the reply"  # and it replays from the cache
+    assert (stats["calls"], stats["cache_hits"], len(sent)) == (1, 1, 2)
+
+
+def test_cache_writes_nothing_when_retries_run_out(tmp_path, monkeypatch):
+    import openai
+    call, sent = flaky_provider(monkeypatch, *[rate_limited() for _ in range(4)])
+    stats = run_eval.Counter(calls=0, cache_hits=0)
+    cached = run_eval.cached(call, IDENTITY, str(tmp_path / "cache"), stats)
+
+    with pytest.raises(openai.RateLimitError):
+        cached("the prompt")
+    assert len(sent) == 4
+    assert not (tmp_path / "cache").exists()
+
+
 def test_cache_key_changes_with_the_rows_the_version_and_the_model(tmp_path, dirs):
     answers = {"a1": TRAVEL, "a2": "Shopping", "a3": "Utilities", "b1": TRAVEL, "b2": "Dining", "b3": "Other"}
     run(tmp_path, dirs, "v2", dict(answers))
@@ -200,6 +253,117 @@ def test_main_writes_results_json(tmp_path, dirs, monkeypatch):
     assert saved["version"] == "v2" and saved["accuracy"] == 1.0
     assert (saved["provider"], saved["model"], saved["endpoint"]) == IDENTITY
     assert len(saved["gold_sha256"]) == 64
+
+
+# ------------------------------------------------------------------ --offline
+
+ANSWERS = {"a1": TRAVEL, "a2": "Shopping", "a3": "Utilities", "b1": TRAVEL, "b2": "Dining", "b3": "Other"}
+
+
+@pytest.fixture
+def no_live_model(monkeypatch):
+    """Offline mode must never reach the real model or use the env identity
+    (the recorded identity is used instead)."""
+    import bedrock_client
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("offline mode reached the live model or used the env identity")
+    monkeypatch.setattr(bedrock_client, "call_model", refuse)
+    monkeypatch.setattr(run_eval, "model_identity", refuse)
+
+
+def record_online(tmp_path, dirs, monkeypatch, version="v2", generated_at="2000-01-02"):
+    """A normal (online) run with a stub model, then pin generated_at to a past date."""
+    gold = write_gold(tmp_path / "gold.csv", GOLD)
+    with monkeypatch.context() as m:
+        m.setattr(run_eval, "model_identity", lambda: IDENTITY)
+        run_eval.main(["--version", version, "--gold", gold], call=Model(dict(ANSWERS)), **dirs)
+    path = os.path.join(dirs["results_dir"], f"{version}.json")
+    with open(path) as f:
+        saved = json.load(f)
+    saved["generated_at"] = generated_at
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(saved, f, indent=2)
+    return gold, path, saved
+
+
+def test_offline_replays_from_the_cache_with_the_recorded_identity_and_date(tmp_path, dirs, monkeypatch,
+                                                                            no_live_model):
+    gold, path, recorded = record_online(tmp_path, dirs, monkeypatch)
+
+    run_eval.main(["--version", "v2", "--gold", gold, "--offline"], **dirs)
+
+    with open(path) as f:
+        replayed = json.load(f)
+    assert (replayed["provider"], replayed["model"], replayed["endpoint"]) == IDENTITY
+    assert replayed["generated_at"] == "2000-01-02"  # when the replies were generated, not today
+    assert (replayed["calls"], replayed["cache_hits"]) == (0, 2)
+    assert {k: v for k, v in replayed.items() if k not in ("calls", "cache_hits")} == \
+        {k: v for k, v in recorded.items() if k not in ("calls", "cache_hits")}
+
+
+def test_offline_cache_miss_is_an_error_and_calls_nothing(tmp_path, dirs, monkeypatch, no_live_model):
+    gold, path, recorded = record_online(tmp_path, dirs, monkeypatch)
+    changed = [row if row[0] != "a2" else ("a2", "alpha", "Office Depot", "Toner", "80.00", "Shopping")
+               for row in GOLD]
+    gold = write_gold(tmp_path / "gold.csv", changed)  # alpha's prompt changes: a miss
+
+    with pytest.raises(SystemExit) as raised:
+        run_eval.main(["--version", "v2", "--gold", gold, "--offline"], **dirs)
+
+    message = str(raised.value)
+    assert message.startswith("offline: cache miss for v2 (")
+    assert "run without --offline" in message
+    with open(path) as f:
+        assert json.load(f) == recorded  # results left untouched
+    assert len(os.listdir(os.path.join(dirs["cache_dir"], "v2"))) == 2  # nothing added
+
+
+def test_offline_uses_the_recorded_identity_not_the_environment(tmp_path, dirs, monkeypatch, no_live_model):
+    import bedrock_client
+    gold, path, _ = record_online(tmp_path, dirs, monkeypatch)
+    monkeypatch.setattr(bedrock_client, "MODEL_PROVIDER", "claude")
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://elsewhere.example/v1")
+
+    run_eval.main(["--version", "v2", "--gold", gold, "--offline"], **dirs)
+
+    with open(path) as f:
+        assert json.load(f)["provider"] == "stub_provider"
+
+
+def test_offline_uses_the_recorded_identity_with_model_provider_claude_set(tmp_path, dirs, monkeypatch):
+    """MODEL_PROVIDER=claude in the environment (and in bedrock_client, as if
+    read at import). model_identity is left real: had offline mode used it,
+    the key would be claude's and every prompt a cache miss."""
+    import bedrock_client
+    gold, path, _ = record_online(tmp_path, dirs, monkeypatch)
+    monkeypatch.setenv("MODEL_PROVIDER", "claude")
+    monkeypatch.setattr(bedrock_client, "MODEL_PROVIDER", "claude")
+    assert run_eval.model_identity()[0] == "claude"
+
+    def refuse(prompt):
+        raise AssertionError("offline mode reached the live model")
+    monkeypatch.setattr(bedrock_client, "call_model", refuse)
+
+    run_eval.main(["--version", "v2", "--gold", gold, "--offline"], **dirs)
+
+    with open(path) as f:
+        replayed = json.load(f)
+    assert (replayed["provider"], replayed["model"], replayed["endpoint"]) == IDENTITY
+    assert (replayed["calls"], replayed["cache_hits"]) == (0, 2)
+
+
+def test_offline_without_recorded_results_is_an_error(tmp_path, dirs, no_live_model):
+    gold = write_gold(tmp_path / "gold.csv", GOLD)
+    with pytest.raises(SystemExit) as raised:
+        run_eval.main(["--version", "v2", "--gold", gold, "--offline"], **dirs)
+    assert "no recorded results" in str(raised.value)
+    assert not os.path.exists(dirs["cache_dir"])
+
+
+def test_offline_requires_a_version(tmp_path, dirs):
+    with pytest.raises(SystemExit):
+        run_eval.main(["--offline"], **dirs)
 
 
 def test_compare_writes_results_md(tmp_path, dirs):

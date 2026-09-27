@@ -26,3 +26,6 @@ businesses/_uploads/
 
 # Rejected narrative attempts (model text): local debugging only, never committed
 narrative_attempts.json
+
+# Personal files kept out of the repo (e.g. generated decks)
+output/

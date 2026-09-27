@@ -1,6 +1,5 @@
 extend-exclude = [
-    # Legacy LLM-calling modules: rewritten in Phase 2/5, not linted until then.
-    "bedrock_client.py",
+    # Legacy module: not linted until it is rewritten.
     "app.py",
 ]
 
