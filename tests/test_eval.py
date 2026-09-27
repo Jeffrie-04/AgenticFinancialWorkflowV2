@@ -13,7 +13,7 @@ import phase3_categorized as cat_mod
 from eval import run_eval
 
 TRAVEL = "Travel/Transportation"
-IDENTITY = ("stub_provider", "stub-model-1")
+IDENTITY = ("stub_provider", "stub-model-1", "https://stub.example/v1")
 
 
 def write_gold(path, rows):
@@ -183,7 +183,7 @@ def test_cache_key_changes_with_the_rows_the_version_and_the_model(tmp_path, dir
     assert (result["calls"], result["cache_hits"]) == (1, 1)  # alpha changed, beta didn't
 
     key = run_eval.cache_key
-    assert key(IDENTITY, "PROMPT") != key(("stub_provider", "stub-model-2"), "PROMPT")
+    assert key(IDENTITY, "PROMPT") != key(("stub_provider", "stub-model-2", "https://stub.example/v1"), "PROMPT")
     assert key(IDENTITY, "PROMPT") != key(IDENTITY, "PROMPT ")
 
 
@@ -198,7 +198,7 @@ def test_main_writes_results_json(tmp_path, dirs, monkeypatch):
     with open(os.path.join(dirs["results_dir"], "v2.json")) as f:
         saved = json.load(f)
     assert saved["version"] == "v2" and saved["accuracy"] == 1.0
-    assert (saved["provider"], saved["model"]) == IDENTITY
+    assert (saved["provider"], saved["model"], saved["endpoint"]) == IDENTITY
     assert len(saved["gold_sha256"]) == 64
 
 
@@ -223,3 +223,111 @@ def test_compare_refuses_mismatched_gold_sets(tmp_path, dirs):
     v2 = {"version": "v2", "gold_sha256": "b" * 64}
     with pytest.raises(SystemExit, match="different gold sets"):
         run_eval.results_markdown(v1, v2)
+
+
+# ------------------------------------------------ review fixes (Codex)
+
+
+def test_same_id_in_two_businesses_is_scored_per_business(tmp_path, dirs):
+    # Content-hash ids can repeat across businesses (same account, same row
+    # content); predictions must not overwrite each other.
+    gold = [("x1", "alpha", "Staples", "Paper", "10.00", "Shopping"),
+            ("x1", "beta", "Chipotle", "Lunch", "12.00", "Dining")]
+
+    def model(prompt):
+        category = "Shopping" if '"merchant": "Staples"' in prompt else "Dining"
+        return json.dumps({"categorized": [{"id": "x1", "category": category}]})
+    result = run_eval.evaluate(write_gold(tmp_path / "gold.csv", gold), "v2", call=model,
+                               identity=IDENTITY, cache_dir=dirs["cache_dir"])
+    assert result["accuracy"] == 1.0  # not 50%
+
+
+def test_duplicate_id_within_a_business_is_rejected(tmp_path, dirs):
+    gold = [("x1", "alpha", "Staples", "Paper", "10.00", "Shopping"),
+            ("x1", "alpha", "Staples", "Paper", "10.00", "Shopping")]
+    with pytest.raises(SystemExit, match="duplicate ids within a business: alpha/x1"):
+        run(tmp_path, dirs, "v2", {}, gold)
+
+
+def test_f1_is_zero_when_travel_is_all_errors(tmp_path, dirs):
+    gold = [("t1", "alpha", "Delta Air Lines", "Flight", "412.60", TRAVEL),
+            ("o1", "alpha", "FedEx", "Shipping", "27.45", "Other")]
+    result, _ = run(tmp_path, dirs, "v2", {"t1": "Other", "o1": TRAVEL}, gold)
+    assert result["travel"] == {"precision": 0.0, "recall": 0.0, "f1": 0.0,
+                                "predicted": 1, "gold": 1, "true_positive": 0}
+
+
+def test_f1_is_none_only_without_any_travel_data(tmp_path, dirs):
+    gold = [("s1", "alpha", "Staples", "Paper", "64.35", "Shopping")]
+    result, _ = run(tmp_path, dirs, "v2", {"s1": "Shopping"}, gold)
+    assert result["travel"] == {"precision": None, "recall": None, "f1": None,
+                                "predicted": 0, "gold": 0, "true_positive": 0}
+
+
+EIGHT = [
+    ("r1", "alpha", "Delta Air Lines", "Flight", "412.60", TRAVEL),  # -> Travel   (TP)
+    ("r2", "alpha", "Uber", "Ride", "31.15", TRAVEL),                # -> Other    (FN)
+    ("r3", "alpha", "Hertz", "Rental", "146.80", TRAVEL),            # -> review   (FN)
+    ("r4", "alpha", "FedEx", "Shipping", "27.45", "Other"),          # -> Travel   (FP)
+    ("r5", "alpha", "Staples", "Paper", "64.35", "Shopping"),        # -> Shopping
+    ("r6", "alpha", "Chipotle", "Lunch", "13.85", "Dining"),         # -> Dining
+    ("r7", "alpha", "Verizon", "Phone", "85.00", "Utilities"),       # -> Utilities
+    ("r8", "alpha", "Jiffy Lube", "Oil change", "69.99", "Other"),   # -> review
+]
+EIGHT_ANSWERS = {"r1": TRAVEL, "r2": "Other", "r3": [None, None], "r4": TRAVEL,
+                 "r5": "Shopping", "r6": "Dining", "r7": "Utilities", "r8": [None, None]}
+
+
+def test_codex_eight_row_gold_set_every_number(tmp_path, dirs):
+    result, _ = run(tmp_path, dirs, "v2", EIGHT_ANSWERS, EIGHT)
+    assert (result["labeled"], result["correct"], result["answered"]) == (8, 4, 6)
+    assert result["accuracy"] == 0.5
+    assert result["answered_accuracy"] == pytest.approx(4 / 6)
+    assert run_eval._pct(result["answered_accuracy"]) == "66.7%"
+    assert result["review_counts"] == {"llm_missing": 2}
+    assert {c: v["accuracy"] for c, v in result["per_category"].items()} == pytest.approx(
+        {"Utilities": 1.0, "Shopping": 1.0, "Dining": 1.0, TRAVEL: 1 / 3, "Other": 0.0})
+    assert result["travel"]["precision"] == 0.5
+    assert result["travel"]["recall"] == pytest.approx(1 / 3)
+    assert result["travel"]["f1"] == pytest.approx(0.4)
+    assert [run_eval._pct(result["travel"][k]) for k in ("precision", "recall", "f1")] == ["50.0%", "33.3%", "40.0%"]
+
+
+def test_initial_and_repair_calls_replay_fully_from_cache(tmp_path, dirs):
+    answers = {"a1": [None, TRAVEL], "a2": "Shopping", "a3": "Utilities",
+               "b1": TRAVEL, "b2": "Dining", "b3": "Other"}
+    first, _ = run(tmp_path, dirs, "v2", answers)
+    assert (first["calls"], first["cache_hits"]) == (3, 0)  # alpha, alpha's repair, beta
+
+    def no_model(prompt):
+        raise AssertionError("cache miss on replay")
+    second = run_eval.evaluate(write_gold(tmp_path / "gold.csv", GOLD), "v2", call=no_model,
+                               identity=IDENTITY, cache_dir=dirs["cache_dir"])
+    assert (second["calls"], second["cache_hits"]) == (0, 3)
+    assert second["rows"] == first["rows"] and second["accuracy"] == first["accuracy"] == 1.0
+
+
+def test_endpoint_is_part_of_the_cache_identity(tmp_path, dirs, monkeypatch):
+    import bedrock_client
+    monkeypatch.setattr(bedrock_client, "MODEL_PROVIDER", "openai")
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://mantle.example/v1")
+    first = run_eval.model_identity()
+    assert first == ("openai", bedrock_client.OPENAI_MODEL_ID, "https://mantle.example/v1")
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://other.example/v1")
+    second = run_eval.model_identity()
+    assert run_eval.cache_key(first, "PROMPT") != run_eval.cache_key(second, "PROMPT")
+
+    answers = {"a1": TRAVEL, "a2": "Shopping", "a3": "Utilities", "b1": TRAVEL, "b2": "Dining", "b3": "Other"}
+    gold = write_gold(tmp_path / "gold.csv", GOLD)
+    for identity, expected_calls in ((first, 2), (first, 0), (second, 2)):
+        result = run_eval.evaluate(gold, "v2", call=Model(dict(answers)), identity=identity,
+                                   cache_dir=dirs["cache_dir"])
+        assert result["calls"] == expected_calls
+
+
+def test_identity_never_includes_api_keys(monkeypatch):
+    import bedrock_client
+    monkeypatch.setattr(bedrock_client, "MODEL_PROVIDER", "anthropic_direct")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-secret-value")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-other-secret")
+    assert not any("secret" in part for part in run_eval.model_identity())
