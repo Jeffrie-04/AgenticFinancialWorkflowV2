@@ -152,3 +152,11 @@ def test_app_never_imports_pipeline_or_model_code():
 def test_app_never_reads_categorized_json_directly():
     with open(APP) as f:
         assert "categorized.json" not in f.read()
+
+
+def test_consultant_is_in_the_business_list_and_renders_without_outputs(outputs):
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    assert "Consultant" in at.sidebar.selectbox[0].options
+    at.sidebar.selectbox[0].select("Consultant").run()
+    assert not at.exception
+    assert any("not found yet" in w.value for w in at.warning)  # no outputs until a live run

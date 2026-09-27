@@ -1,0 +1,1196 @@
+{
+  "version": "v1",
+  "provider": "anthropic_direct",
+  "model": "claude-haiku-4-5",
+  "endpoint": "default",
+  "gold_sha256": "588958b144ab57dce3014f392aad28d8deee4d2e511112e10fe773f9359d0789",
+  "labeled": 142,
+  "unlabeled": 0,
+  "correct": 135,
+  "accuracy": 0.9507042253521126,
+  "answered": 142,
+  "answered_accuracy": 0.9507042253521126,
+  "review_counts": {},
+  "per_category": {
+    "Utilities": {
+      "support": 49,
+      "correct": 47,
+      "accuracy": 0.9591836734693877
+    },
+    "Shopping": {
+      "support": 36,
+      "correct": 33,
+      "accuracy": 0.9166666666666666
+    },
+    "Dining": {
+      "support": 12,
+      "correct": 12,
+      "accuracy": 1.0
+    },
+    "Other": {
+      "support": 45,
+      "correct": 43,
+      "accuracy": 0.9555555555555556
+    }
+  },
+  "confusion": {
+    "Utilities": {
+      "Utilities": 47,
+      "Other": 2
+    },
+    "Shopping": {
+      "Shopping": 33,
+      "Other": 2,
+      "Utilities": 1
+    },
+    "Dining": {
+      "Dining": 12
+    },
+    "Other": {
+      "Other": 43,
+      "Utilities": 2
+    }
+  },
+  "travel": null,
+  "calls": 0,
+  "cache_hits": 4,
+  "rows": [
+    {
+      "id": "be4a2c922d4ddc6f-0",
+      "business": "landscaper",
+      "merchant": "Shell Gas",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "9609964209c56c42-0",
+      "business": "landscaper",
+      "merchant": "Shell Gas",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "77cd9bff54b3264e-0",
+      "business": "landscaper",
+      "merchant": "BP Gas",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "125b24abe9786f4d-0",
+      "business": "landscaper",
+      "merchant": "Shell Gas",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "6a0afd1503603471-0",
+      "business": "landscaper",
+      "merchant": "Wawa Fuel",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "66a712ab6b55a3e4-0",
+      "business": "landscaper",
+      "merchant": "Wawa Fuel",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "0b3cadce8e5b657f-0",
+      "business": "landscaper",
+      "merchant": "SiteOne Landscape Supply",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "ddd5c97d86370bc8-0",
+      "business": "landscaper",
+      "merchant": "Stone Yard Supply",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "4312c1675c7c5090-0",
+      "business": "landscaper",
+      "merchant": "SiteOne Landscape Supply",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "de23b8df2e091c29-0",
+      "business": "landscaper",
+      "merchant": "Local Nursery",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "7606255d721ff2c0-0",
+      "business": "landscaper",
+      "merchant": "Home Depot",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "c50e1b8c66c37f95-0",
+      "business": "landscaper",
+      "merchant": "Home Depot",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "8b2f53f90220cf03-0",
+      "business": "landscaper",
+      "merchant": "Bulk Mulch Supplier",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "6039d4208b8e2c0b-0",
+      "business": "landscaper",
+      "merchant": "Toro Dealer",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "368967186afdca17-0",
+      "business": "landscaper",
+      "merchant": "Equipment Repair Shop",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "173e3dcc7ec7aabd-0",
+      "business": "landscaper",
+      "merchant": "Stihl Dealer",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "0b435527a3340557-0",
+      "business": "landscaper",
+      "merchant": "Gusto Payroll",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "82c038b49ac6ca85-0",
+      "business": "landscaper",
+      "merchant": "Gusto Payroll",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "d5e76c2037c19f5d-0",
+      "business": "landscaper",
+      "merchant": "Commercial Auto Insurance",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "0fa5c9f3537c13d3-0",
+      "business": "landscaper",
+      "merchant": "Business Liability Insurance",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "af594b3fd2ac0e62-0",
+      "business": "landscaper",
+      "merchant": "Truck Lease Payment",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "1fc48ac41e22e0c4-0",
+      "business": "landscaper",
+      "merchant": "County Landfill",
+      "label": "Other",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "524b3d0a2cc10ba3-0",
+      "business": "landscaper",
+      "merchant": "County Landfill",
+      "label": "Other",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "d558f3cbf1aabe10-0",
+      "business": "landscaper",
+      "merchant": "Jobber Software",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "45cfa9e546915754-0",
+      "business": "landscaper",
+      "merchant": "QuickBooks Online",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "4cedab85523616ed-0",
+      "business": "landscaper",
+      "merchant": "Verizon",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "e221de17d4b5b5b7-0",
+      "business": "landscaper",
+      "merchant": "Equipment Storage Rent",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "a696a66c2316d761-0",
+      "business": "landscaper",
+      "merchant": "Subway",
+      "label": "Dining",
+      "scored_label": "Dining",
+      "predicted": "Dining"
+    },
+    {
+      "id": "d040c5925f97bc89-0",
+      "business": "landscaper",
+      "merchant": "Local Deli",
+      "label": "Dining",
+      "scored_label": "Dining",
+      "predicted": "Dining"
+    },
+    {
+      "id": "0ca0c7198bb22c5a-0",
+      "business": "landscaper",
+      "merchant": "Dunkin",
+      "label": "Dining",
+      "scored_label": "Dining",
+      "predicted": "Dining"
+    },
+    {
+      "id": "04a6da25b8e79578-0",
+      "business": "landscaper",
+      "merchant": "DMV Registration",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Other"
+    },
+    {
+      "id": "02042db185a274e9-0",
+      "business": "landscaper",
+      "merchant": "Uniform Supply Co",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "ebe36fb7893ee7b9-0",
+      "business": "law_firm",
+      "merchant": "ADP Payroll",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "c52f6b0d84b61fdb-0",
+      "business": "law_firm",
+      "merchant": "ADP Payroll",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "99898ab4ddfb5e1a-0",
+      "business": "law_firm",
+      "merchant": "Contract Attorney Payment",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "7c549bdcc4298f39-0",
+      "business": "law_firm",
+      "merchant": "Regus Office Space",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "561fd8192860b130-0",
+      "business": "law_firm",
+      "merchant": "Hiscox Insurance",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "6ee8a4d9d3f3c09b-0",
+      "business": "law_firm",
+      "merchant": "Business Liability Insurance",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "1c0c0f72c7206a96-0",
+      "business": "law_firm",
+      "merchant": "Westlaw Subscription",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "7a7ff53c626c1ef7-0",
+      "business": "law_firm",
+      "merchant": "LexisNexis",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "572971b4c587405f-0",
+      "business": "law_firm",
+      "merchant": "Clio Legal Software",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "98dfe71e40e35ab6-0",
+      "business": "law_firm",
+      "merchant": "Microsoft 365",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "670cf2471a765c2a-0",
+      "business": "law_firm",
+      "merchant": "Adobe Acrobat Pro",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "1e062a9e8bbf4446-0",
+      "business": "law_firm",
+      "merchant": "DocuSign",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "8a357adb8a1617cc-0",
+      "business": "law_firm",
+      "merchant": "Zoom",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "740bf2d28738ad46-0",
+      "business": "law_firm",
+      "merchant": "Certified Court Reporting",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "0f8337fc3966e2c7-0",
+      "business": "law_firm",
+      "merchant": "Expert Witness Retainer",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "b1362540ecd72933-0",
+      "business": "law_firm",
+      "merchant": "Process Server LLC",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "35f6bfc2bd1efc9d-0",
+      "business": "law_firm",
+      "merchant": "Verizon Business",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "4cf9371696fedcb8-0",
+      "business": "law_firm",
+      "merchant": "ConEd Electric",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "fef6217e97e9b19b-0",
+      "business": "law_firm",
+      "merchant": "Staples",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "495d9e724f752b40-0",
+      "business": "law_firm",
+      "merchant": "Best Buy",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "81ca3c33522e484e-0",
+      "business": "law_firm",
+      "merchant": "Amazon Business",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "6ec45f8ae8b97848-0",
+      "business": "law_firm",
+      "merchant": "Office Depot",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "c04f572d3b4d341f-0",
+      "business": "law_firm",
+      "merchant": "The Capital Grille",
+      "label": "Dining",
+      "scored_label": "Dining",
+      "predicted": "Dining"
+    },
+    {
+      "id": "48dd7afe169ca9d2-0",
+      "business": "law_firm",
+      "merchant": "Panera Bread",
+      "label": "Dining",
+      "scored_label": "Dining",
+      "predicted": "Dining"
+    },
+    {
+      "id": "aeb711f9eae43515-0",
+      "business": "law_firm",
+      "merchant": "Starbucks",
+      "label": "Dining",
+      "scored_label": "Dining",
+      "predicted": "Dining"
+    },
+    {
+      "id": "8376fd5f0fc3c4f6-0",
+      "business": "law_firm",
+      "merchant": "County Clerk Filing Fee",
+      "label": "Other",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "2ec88b3ffe19e2a6-0",
+      "business": "law_firm",
+      "merchant": "Uber",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "719d824983fc9ddf-0",
+      "business": "law_firm",
+      "merchant": "FedEx",
+      "label": "Other",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "7d41a245ae44e1bb-0",
+      "business": "law_firm",
+      "merchant": "LegalZoom Filing",
+      "label": "Other",
+      "scored_label": "Other",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "b6cb394c69b15fb5-0",
+      "business": "law_firm",
+      "merchant": "Parking Garage",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "b7d84e793e9a862a-0",
+      "business": "restaurant",
+      "merchant": "Sysco Foods",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "f5e608da800f1a96-0",
+      "business": "restaurant",
+      "merchant": "Sysco Foods",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "c47b06ca8cd65d11-0",
+      "business": "restaurant",
+      "merchant": "Sysco Foods",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "0c0a1ccb962fc250-0",
+      "business": "restaurant",
+      "merchant": "Sysco Foods",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "e8dc2ba58296b80f-0",
+      "business": "restaurant",
+      "merchant": "US Foods",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "7c4a824f495cdf76-0",
+      "business": "restaurant",
+      "merchant": "US Foods",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "d7f6b57d34fed81a-0",
+      "business": "restaurant",
+      "merchant": "Restaurant Depot",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "2227b47fd72f0d3e-0",
+      "business": "restaurant",
+      "merchant": "Restaurant Depot",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "ee04ee1a2bf303e0-0",
+      "business": "restaurant",
+      "merchant": "Local Seafood Co",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "5435fbda949e399a-0",
+      "business": "restaurant",
+      "merchant": "Local Seafood Co",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "441dd5cbe0a3436c-0",
+      "business": "restaurant",
+      "merchant": "Craft Beverage Distributor",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "9170eec618d4bcfd-0",
+      "business": "restaurant",
+      "merchant": "Craft Beverage Distributor",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "2c98f0aebf148017-0",
+      "business": "restaurant",
+      "merchant": "Gusto Payroll",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "efe54f25675ed74f-0",
+      "business": "restaurant",
+      "merchant": "Gusto Payroll",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "e7f491f0057b124c-0",
+      "business": "restaurant",
+      "merchant": "Property Management LLC",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "3da5a7d1397f939a-0",
+      "business": "restaurant",
+      "merchant": "National Grid Gas",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "e1018e6be3085f05-0",
+      "business": "restaurant",
+      "merchant": "ConEd Electric",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "11f4a2938773bd61-0",
+      "business": "restaurant",
+      "merchant": "Water & Sewer",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "29bc07974ff0cad0-0",
+      "business": "restaurant",
+      "merchant": "Verizon",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "824639743e288bf1-0",
+      "business": "restaurant",
+      "merchant": "Ecolab",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "f7e798cbcc46b061-0",
+      "business": "restaurant",
+      "merchant": "Waste Management",
+      "label": "Other",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "cfb4f5ed2faaf449-0",
+      "business": "restaurant",
+      "merchant": "Toast POS",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "c9012d42856a604f-0",
+      "business": "restaurant",
+      "merchant": "OpenTable",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "45cfa9e546915754-0",
+      "business": "restaurant",
+      "merchant": "QuickBooks Online",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "2506643912b769c4-0",
+      "business": "restaurant",
+      "merchant": "Restaurant Insurance Co",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "211ccb80e0ec7001-0",
+      "business": "restaurant",
+      "merchant": "WebstaurantStore",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "3a2c89a7c72c3561-0",
+      "business": "restaurant",
+      "merchant": "Restaurant Depot",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "b78c1480c16e6ef5-0",
+      "business": "restaurant",
+      "merchant": "Home Depot",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "bdf2f25db38d7f9b-0",
+      "business": "restaurant",
+      "merchant": "Competitor Restaurant",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Other"
+    },
+    {
+      "id": "37ae592481495bff-0",
+      "business": "restaurant",
+      "merchant": "Square Processing Fees",
+      "label": "Other",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "e02f92c6a1d584b7-0",
+      "business": "restaurant",
+      "merchant": "DoorDash Commission Fees",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Other"
+    },
+    {
+      "id": "4473fe2c729015ec-0",
+      "business": "restaurant",
+      "merchant": "Shell Gas",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "d9695953dcd1842f-0",
+      "business": "restaurant",
+      "merchant": "Health Dept Permit",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "04013cc89330c136-0",
+      "business": "restaurant",
+      "merchant": "Uber",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "1602fcc53cd6d3cb-0",
+      "business": "consultant",
+      "merchant": "WeWork",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "d03622d335ac574f-0",
+      "business": "consultant",
+      "merchant": "Microsoft 365",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "a89590498044b6b5-0",
+      "business": "consultant",
+      "merchant": "Zoom",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "d75af762551a9795-0",
+      "business": "consultant",
+      "merchant": "Delta Air Lines",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "013d21c5a06fb333-0",
+      "business": "consultant",
+      "merchant": "Uber",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "f438d21ceb3a13e5-0",
+      "business": "consultant",
+      "merchant": "Marriott Marquis",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "4bcaa74292e6ee01-0",
+      "business": "consultant",
+      "merchant": "Marriott Marquis",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "01731925f11232eb-0",
+      "business": "consultant",
+      "merchant": "Pret A Manger",
+      "label": "Dining",
+      "scored_label": "Dining",
+      "predicted": "Dining"
+    },
+    {
+      "id": "5ca81127caef6451-0",
+      "business": "consultant",
+      "merchant": "Lyft",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "0cff3a00b73299aa-0",
+      "business": "consultant",
+      "merchant": "ParkChicago",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "1488da11c5c5f698-0",
+      "business": "consultant",
+      "merchant": "Shell",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "1e79e2fbfe7ff7a1-0",
+      "business": "consultant",
+      "merchant": "Illinois Tollway I-PASS",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "7d953e7652ab0c1d-0",
+      "business": "consultant",
+      "merchant": "United Airlines",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "1eef76ad9dfc3b39-0",
+      "business": "consultant",
+      "merchant": "Adobe",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "430fe2f461b952ce-0",
+      "business": "consultant",
+      "merchant": "Tortas Frontera O'Hare",
+      "label": "Dining",
+      "scored_label": "Dining",
+      "predicted": "Dining"
+    },
+    {
+      "id": "538b8c84cb2320c8-0",
+      "business": "consultant",
+      "merchant": "Airbnb",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "07d998032715af1f-0",
+      "business": "consultant",
+      "merchant": "Uber",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "5530b0ddb1b86e25-0",
+      "business": "consultant",
+      "merchant": "Tatte Bakery",
+      "label": "Dining",
+      "scored_label": "Dining",
+      "predicted": "Dining"
+    },
+    {
+      "id": "79ecc2cf8276363c-0",
+      "business": "consultant",
+      "merchant": "Staples",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "a2e55272ede55fa1-0",
+      "business": "consultant",
+      "merchant": "MBTA",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "de0a9fd491ab2b47-0",
+      "business": "consultant",
+      "merchant": "Uber",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "1bd43415a619abd2-0",
+      "business": "consultant",
+      "merchant": "Verizon",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "ee281233ee2ed917-0",
+      "business": "consultant",
+      "merchant": "Peoples Gas",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "c0303740c954985f-0",
+      "business": "consultant",
+      "merchant": "ChargePoint",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "ab5ad64e7f8914ac-0",
+      "business": "consultant",
+      "merchant": "Hiscox",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "f27350c3b3860969-0",
+      "business": "consultant",
+      "merchant": "Amazon",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Shopping"
+    },
+    {
+      "id": "a203c4b68a2fc881-0",
+      "business": "consultant",
+      "merchant": "SpotHero",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "ec10c43f1c4b7d02-0",
+      "business": "consultant",
+      "merchant": "Chipotle",
+      "label": "Dining",
+      "scored_label": "Dining",
+      "predicted": "Dining"
+    },
+    {
+      "id": "418a8cb8e5543892-0",
+      "business": "consultant",
+      "merchant": "Southwest Airlines",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "d9c6d745c6ac97dd-0",
+      "business": "consultant",
+      "merchant": "Hampton Inn",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "75184a08df9ce250-0",
+      "business": "consultant",
+      "merchant": "Hampton Inn",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "4f707003bc2797f4-0",
+      "business": "consultant",
+      "merchant": "E-470 Toll Road",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "d0c9409b227d5928-0",
+      "business": "consultant",
+      "merchant": "Hertz",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "e3428a3d337e6e6f-0",
+      "business": "consultant",
+      "merchant": "Conoco",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "d30945b1c2b501c9-0",
+      "business": "consultant",
+      "merchant": "Southwest Airlines",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "c32c09933ddeef49-0",
+      "business": "consultant",
+      "merchant": "QuickBooks Online",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "f5e69bac95037228-0",
+      "business": "consultant",
+      "merchant": "Starbucks",
+      "label": "Dining",
+      "scored_label": "Dining",
+      "predicted": "Dining"
+    },
+    {
+      "id": "3e2ca6c42dfdb58f-0",
+      "business": "consultant",
+      "merchant": "Tesla Supercharger",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "70e3340ad9ec84e1-0",
+      "business": "consultant",
+      "merchant": "Illinois Tollway I-PASS",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "e2a5eedd905f560c-0",
+      "business": "consultant",
+      "merchant": "Hilton Garden Inn",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "fcd26270859be140-0",
+      "business": "consultant",
+      "merchant": "Olive Garden",
+      "label": "Dining",
+      "scored_label": "Dining",
+      "predicted": "Dining"
+    },
+    {
+      "id": "5a4cfb8e3b2879d8-0",
+      "business": "consultant",
+      "merchant": "LinkedIn Premium",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "1a38ce280d537935-0",
+      "business": "consultant",
+      "merchant": "FedEx",
+      "label": "Shopping",
+      "scored_label": "Shopping",
+      "predicted": "Other"
+    },
+    {
+      "id": "02beffb1ea96b499-0",
+      "business": "consultant",
+      "merchant": "Jiffy Lube",
+      "label": "Other",
+      "scored_label": "Other",
+      "predicted": "Other"
+    },
+    {
+      "id": "32c58c55031a4e9f-0",
+      "business": "consultant",
+      "merchant": "Brightline Consulting Partners",
+      "label": "Utilities",
+      "scored_label": "Utilities",
+      "predicted": "Utilities"
+    },
+    {
+      "id": "86d70c42b5621c45-0",
+      "business": "consultant",
+      "merchant": "The Parking Spot",
+      "label": "Travel/Transportation",
+      "scored_label": "Other",
+      "predicted": "Other"
+    }
+  ],
+  "generated_at": "2026-09-27"
+}

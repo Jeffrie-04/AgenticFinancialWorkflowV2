@@ -23,3 +23,6 @@ venv/
 # data, unlike the curated businesses/<demo>/ fixtures which stay tracked.
 businesses/_uploads/
 
+
+# Rejected narrative attempts (model text): local debugging only, never committed
+narrative_attempts.json

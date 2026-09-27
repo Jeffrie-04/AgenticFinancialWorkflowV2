@@ -183,7 +183,7 @@ def test_duplicate_same_category_accepted_once_and_counted():
     assert result.counts["duplicate_ids"] == 1
 
 
-@pytest.mark.parametrize("second", ["Dining", "Travel"])  # Q8: valid + invalid is a conflict too
+@pytest.mark.parametrize("second", ["Dining", "Groceries"])  # Q8: valid + invalid is a conflict too
 def test_duplicate_conflicting_categories(second):
     result = check([{"id": "a", "category": "Shopping"}, {"id": "a", "category": second},
                     {"id": "b", "category": "Other"}])
@@ -204,7 +204,7 @@ def test_unknown_id_is_ignored_and_counted():
 
 
 def test_invented_category():
-    result = check([{"id": "a", "category": "Travel"}, {"id": "b", "category": "Other"}])
+    result = check([{"id": "a", "category": "Groceries"}, {"id": "b", "category": "Other"}])
     assert result.failures == {"a": "llm_invalid_category"}
 
 

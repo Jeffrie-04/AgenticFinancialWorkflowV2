@@ -24,6 +24,7 @@ FIXED_BUSINESSES = {
     "Law Firm": "businesses/law_firm",
     "Restaurant": "businesses/restaurant",
     "Landscaper": "businesses/landscaper",
+    "Consultant": "businesses/consultant",
 }
 
 REQUIRED_CSV_COLUMNS = {"date", "merchant", "amount"}

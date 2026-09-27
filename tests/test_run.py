@@ -136,6 +136,9 @@ def test_codex_finding1_only_ok_rows_reach_any_prompt(tmp_path, monkeypatch):
     assert len(debit_ids) == 6 and len(credit_ids) == 2
     categorizer_prompts = [p for p in prompts if phase3_categorized.ROWS_START in p]
     assert len(categorizer_prompts) == 1
+    # Production is v2: the pipeline's categorizer prompt offers Travel/Transportation.
+    assert ("Allowed categories (use these exact strings): Utilities, Shopping, Dining, "
+            "Travel/Transportation, Other") in categorizer_prompts[0]
     assert all(i in categorizer_prompts[0] for i in debit_ids)
     assert not any(i in categorizer_prompts[0] for i in credit_ids)
     # Q6: the plan phase's sample rows are non-refund DEBITs too.
@@ -148,6 +151,8 @@ def test_codex_finding1_only_ok_rows_reach_any_prompt(tmp_path, monkeypatch):
     categorized = json.loads((outputs / "categorized.json").read_text())["categorized"]
     assert sorted(c["id"] for c in categorized) == sorted(ok_ids)
     assert dq["kpi_join"]["rows_in_kpis"] == 8
+    # The stub's narrative has no numbers, so both texts are grounded first time.
+    assert {k: v["status"] for k, v in dq["grounding"].items()} == {"summary": "grounded", "reflection": "grounded"}
 
 
 def summary_prompt(prompts):
