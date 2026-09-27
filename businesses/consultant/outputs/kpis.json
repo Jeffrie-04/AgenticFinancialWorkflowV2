@@ -1,0 +1,54 @@
+{
+  "kpis": {
+    "total_spend": 5377.23,
+    "total_income": 48350.0,
+    "top_merchants": [
+      "Brightline Consulting Partners",
+      "Airbnb",
+      "Marriott Marquis"
+    ],
+    "average_expense": 116.9,
+    "net_cash_flow": 42972.77,
+    "status": "surplus",
+    "spend_by_category": {
+      "Travel/Transportation": {
+        "amount": 3461.83,
+        "pct_of_spend": 64.4
+      },
+      "Utilities": {
+        "amount": 863.17,
+        "pct_of_spend": 16.1
+      },
+      "Other": {
+        "amount": 747.44,
+        "pct_of_spend": 13.9
+      },
+      "Shopping": {
+        "amount": 194.34,
+        "pct_of_spend": 3.6
+      },
+      "Dining": {
+        "amount": 110.45,
+        "pct_of_spend": 2.1
+      }
+    },
+    "income_concentration": {
+      "top_client": "Globex Corporation",
+      "top_client_pct": 32.6,
+      "top3_clients_pct": 83.0,
+      "num_income_sources": 4
+    },
+    "fixed_vs_discretionary": {
+      "fixed_spend": 863.17,
+      "discretionary_spend": 4514.06,
+      "fixed_pct": 16.1
+    },
+    "burn_rate": {
+      "period_days": 30,
+      "daily_avg_spend": 179.24,
+      "monthly_projection": 5377.23,
+      "unparseable_dates": 0,
+      "runway_note": "Runway not computed: requires a starting cash balance."
+    }
+  }
+}

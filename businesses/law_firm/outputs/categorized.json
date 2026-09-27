@@ -122,11 +122,11 @@
     },
     {
       "id": "8376fd5f0fc3c4f6-0",
-      "category": "Utilities"
+      "category": "Other"
     },
     {
       "id": "2ec88b3ffe19e2a6-0",
-      "category": "Other"
+      "category": "Travel/Transportation"
     },
     {
       "id": "719d824983fc9ddf-0",
@@ -134,11 +134,22 @@
     },
     {
       "id": "7d41a245ae44e1bb-0",
-      "category": "Utilities"
+      "category": "Other"
     },
     {
       "id": "b6cb394c69b15fb5-0",
-      "category": "Other"
+      "category": "Travel/Transportation"
     }
-  ]
+  ],
+  "review": [],
+  "llm": {
+    "calls": 1,
+    "retried_ids": 0,
+    "invalid_items": 0,
+    "unknown_ids": 0,
+    "duplicate_ids": 0,
+    "unparseable_replies": 0,
+    "rule_assigned": 5,
+    "refunds_not_sent": 0
+  }
 }

@@ -556,7 +556,7 @@
       "refund_of": null,
       "status": "OK",
       "reason": null,
-      "category": "Utilities"
+      "category": "Shopping"
     },
     {
       "id": "f7e798cbcc46b061-0",
@@ -772,7 +772,7 @@
       "refund_of": null,
       "status": "OK",
       "reason": null,
-      "category": "Other"
+      "category": "Travel/Transportation"
     },
     {
       "id": "d9695953dcd1842f-0",
@@ -808,7 +808,7 @@
       "refund_of": null,
       "status": "OK",
       "reason": null,
-      "category": "Other"
+      "category": "Travel/Transportation"
     },
     {
       "id": "d62c3fca40ef93f6-0",

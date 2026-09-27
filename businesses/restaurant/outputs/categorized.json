@@ -122,7 +122,7 @@
     },
     {
       "id": "824639743e288bf1-0",
-      "category": "Utilities"
+      "category": "Shopping"
     },
     {
       "id": "f7e798cbcc46b061-0",
@@ -170,7 +170,7 @@
     },
     {
       "id": "4473fe2c729015ec-0",
-      "category": "Other"
+      "category": "Travel/Transportation"
     },
     {
       "id": "d9695953dcd1842f-0",
@@ -178,7 +178,7 @@
     },
     {
       "id": "04013cc89330c136-0",
-      "category": "Other"
+      "category": "Travel/Transportation"
     },
     {
       "id": "d62c3fca40ef93f6-0",
@@ -188,5 +188,16 @@
       "id": "d1a7de4bf7f003b1-0",
       "category": "Income"
     }
-  ]
+  ],
+  "review": [],
+  "llm": {
+    "calls": 1,
+    "retried_ids": 0,
+    "invalid_items": 0,
+    "unknown_ids": 0,
+    "duplicate_ids": 0,
+    "unparseable_replies": 0,
+    "rule_assigned": 13,
+    "refunds_not_sent": 0
+  }
 }

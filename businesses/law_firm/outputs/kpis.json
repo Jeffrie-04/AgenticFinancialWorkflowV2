@@ -12,20 +12,24 @@
     "status": "surplus",
     "spend_by_category": {
       "Utilities": {
-        "amount": 79712.98,
-        "pct_of_spend": 95.9
+        "amount": 79078.98,
+        "pct_of_spend": 95.1
       },
       "Shopping": {
         "amount": 2671.55,
         "pct_of_spend": 3.2
       },
+      "Other": {
+        "amount": 726.3,
+        "pct_of_spend": 0.9
+      },
       "Dining": {
         "amount": 405.55,
         "pct_of_spend": 0.5
       },
-      "Other": {
-        "amount": 340.8,
-        "pct_of_spend": 0.4
+      "Travel/Transportation": {
+        "amount": 248.5,
+        "pct_of_spend": 0.3
       }
     },
     "income_concentration": {
@@ -35,9 +39,9 @@
       "num_income_sources": 5
     },
     "fixed_vs_discretionary": {
-      "fixed_spend": 79712.98,
-      "discretionary_spend": 3417.9,
-      "fixed_pct": 95.9
+      "fixed_spend": 79078.98,
+      "discretionary_spend": 4051.9,
+      "fixed_pct": 95.1
     },
     "burn_rate": {
       "period_days": 27,

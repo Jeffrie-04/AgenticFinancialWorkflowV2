@@ -556,7 +556,7 @@
       "refund_of": null,
       "status": "OK",
       "reason": null,
-      "category": "Utilities"
+      "category": "Other"
     },
     {
       "id": "2ec88b3ffe19e2a6-0",
@@ -574,7 +574,7 @@
       "refund_of": null,
       "status": "OK",
       "reason": null,
-      "category": "Other"
+      "category": "Travel/Transportation"
     },
     {
       "id": "719d824983fc9ddf-0",
@@ -610,7 +610,7 @@
       "refund_of": null,
       "status": "OK",
       "reason": null,
-      "category": "Utilities"
+      "category": "Other"
     },
     {
       "id": "b6cb394c69b15fb5-0",
@@ -628,7 +628,7 @@
       "refund_of": null,
       "status": "OK",
       "reason": null,
-      "category": "Other"
+      "category": "Travel/Transportation"
     }
   ]
 }

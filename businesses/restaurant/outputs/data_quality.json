@@ -31,6 +31,29 @@
       "credit": "0.00",
       "rows": 0
     },
-    "llm": {}
+    "llm": {
+      "calls": 1,
+      "retried_ids": 0,
+      "invalid_items": 0,
+      "unknown_ids": 0,
+      "duplicate_ids": 0,
+      "unparseable_replies": 0,
+      "rule_assigned": 13,
+      "refunds_not_sent": 0
+    }
+  },
+  "grounding": {
+    "summary": {
+      "status": "grounded",
+      "attempts": 1,
+      "unsupported": []
+    },
+    "reflection": {
+      "status": "fallback",
+      "attempts": 2,
+      "unsupported": [
+        "97.2%"
+      ]
+    }
   }
 }

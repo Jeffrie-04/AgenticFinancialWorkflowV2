@@ -1,7 +1,9 @@
-Your business is running a slim surplus, but you're heavily dependent on one income source and carrying substantial fixed costs.
+You're running a tight surplus, but with major structural risks that need urgent attention.
 
-Your top three clients account for 87% of income, with Mercer Estate Settlement alone at 50%. This concentration creates real risk—if that client's work ends, you'll struggle. With only five income sources total, building a more diverse client base should be your priority.
+Your net cash flow is $519.12 on total income of $83,650.00 and total spend of $83,130.88—barely profitable. The real problem: Utilities account for $79,078.98 of your spending (95.1% of total spend). This is almost certainly payroll and office costs bundled under that category. You have almost no cushion.
 
-Utilities represent 96% of your spending at nearly 80,000. This is unusually high and worth investigating—whether this reflects payroll, office leasing, or actual utilities, it's your biggest lever for improving cash position.
+Income concentration is dangerous. Your top client, Mercer Estate Settlement, represents 50.2% of income, and your top 3 clients represent 86.7% of total income across only 5 income sources. Losing one major client would cripple you.
 
-Your net cash flow of 519 is razor-thin against monthly income of 83,650. You have almost no buffer. Focus on signing 2-3 new recurring clients in the next quarter to dilute income concentration, and audit that utilities category line-by-line to find cost reduction opportunities. Your fixed costs leave no room for error.
+Fixed spend is $79,078.98 (95.1% of all spending), leaving only $4,051.90 discretionary spend. You have almost zero flexibility to absorb shocks.
+
+Action items: First, immediately diversify income—you need more clients to reduce reliance on Mercer Estate Settlement. Second, negotiate your Utilities costs (payroll and office); they're consuming your entire margin. Third, build a cash reserve before the next revenue dip. Right now you're one client loss away from insolvency.

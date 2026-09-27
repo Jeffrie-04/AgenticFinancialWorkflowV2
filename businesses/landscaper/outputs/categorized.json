@@ -34,27 +34,27 @@
     },
     {
       "id": "be4a2c922d4ddc6f-0",
-      "category": "Other"
+      "category": "Travel/Transportation"
     },
     {
       "id": "9609964209c56c42-0",
-      "category": "Other"
+      "category": "Travel/Transportation"
     },
     {
       "id": "77cd9bff54b3264e-0",
-      "category": "Other"
+      "category": "Travel/Transportation"
     },
     {
       "id": "125b24abe9786f4d-0",
-      "category": "Other"
+      "category": "Travel/Transportation"
     },
     {
       "id": "6a0afd1503603471-0",
-      "category": "Other"
+      "category": "Travel/Transportation"
     },
     {
       "id": "66a712ab6b55a3e4-0",
-      "category": "Other"
+      "category": "Travel/Transportation"
     },
     {
       "id": "0b3cadce8e5b657f-0",
@@ -168,5 +168,16 @@
       "id": "83321c5f851df7f6-0",
       "category": "Income"
     }
-  ]
+  ],
+  "review": [],
+  "llm": {
+    "calls": 1,
+    "retried_ids": 0,
+    "invalid_items": 0,
+    "unknown_ids": 0,
+    "duplicate_ids": 0,
+    "unparseable_replies": 0,
+    "rule_assigned": 10,
+    "refunds_not_sent": 0
+  }
 }

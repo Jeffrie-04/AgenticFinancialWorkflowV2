@@ -12,19 +12,23 @@
     "status": "deficit",
     "spend_by_category": {
       "Shopping": {
-        "amount": 32316.3,
-        "pct_of_spend": 52.0
+        "amount": 32636.3,
+        "pct_of_spend": 52.5
       },
       "Utilities": {
-        "amount": 28079.0,
-        "pct_of_spend": 45.2
+        "amount": 27759.0,
+        "pct_of_spend": 44.7
       },
       "Other": {
-        "amount": 1639.2,
-        "pct_of_spend": 2.6
+        "amount": 1516.0,
+        "pct_of_spend": 2.4
       },
       "Dining": {
         "amount": 125.0,
+        "pct_of_spend": 0.2
+      },
+      "Travel/Transportation": {
+        "amount": 123.2,
         "pct_of_spend": 0.2
       }
     },
@@ -35,9 +39,9 @@
       "num_income_sources": 4
     },
     "fixed_vs_discretionary": {
-      "fixed_spend": 28079.0,
-      "discretionary_spend": 34080.5,
-      "fixed_pct": 45.2
+      "fixed_spend": 27759.0,
+      "discretionary_spend": 34400.5,
+      "fixed_pct": 44.7
     },
     "burn_rate": {
       "period_days": 30,

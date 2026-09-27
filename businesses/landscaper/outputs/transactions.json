@@ -160,7 +160,7 @@
       "refund_of": null,
       "status": "OK",
       "reason": null,
-      "category": "Other"
+      "category": "Travel/Transportation"
     },
     {
       "id": "9609964209c56c42-0",
@@ -178,7 +178,7 @@
       "refund_of": null,
       "status": "OK",
       "reason": null,
-      "category": "Other"
+      "category": "Travel/Transportation"
     },
     {
       "id": "77cd9bff54b3264e-0",
@@ -196,7 +196,7 @@
       "refund_of": null,
       "status": "OK",
       "reason": null,
-      "category": "Other"
+      "category": "Travel/Transportation"
     },
     {
       "id": "125b24abe9786f4d-0",
@@ -214,7 +214,7 @@
       "refund_of": null,
       "status": "OK",
       "reason": null,
-      "category": "Other"
+      "category": "Travel/Transportation"
     },
     {
       "id": "6a0afd1503603471-0",
@@ -232,7 +232,7 @@
       "refund_of": null,
       "status": "OK",
       "reason": null,
-      "category": "Other"
+      "category": "Travel/Transportation"
     },
     {
       "id": "66a712ab6b55a3e4-0",
@@ -250,7 +250,7 @@
       "refund_of": null,
       "status": "OK",
       "reason": null,
-      "category": "Other"
+      "category": "Travel/Transportation"
     },
     {
       "id": "0b3cadce8e5b657f-0",

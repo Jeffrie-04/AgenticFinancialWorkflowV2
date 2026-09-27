@@ -1,21 +1,24 @@
 {
   "source_file": "transactions.csv",
   "counts": {
-    "rows": 35,
-    "ok": 35,
-    "needs_review": 0,
-    "rejected": 0
+    "rows": 54,
+    "ok": 52,
+    "needs_review": 1,
+    "rejected": 1
   },
-  "reasons": {},
+  "reasons": {
+    "merchant_blank": 1,
+    "amount_unparseable": 1
+  },
   "needs_review_total": {
-    "debit": "0.00",
+    "debit": "56.00",
     "credit": "0.00",
-    "rows": 0
+    "rows": 1
   },
   "description_truncated": 0,
   "warnings": [],
   "kpi_join": {
-    "rows_in_kpis": 35,
+    "rows_in_kpis": 52,
     "join_ambiguous": 0,
     "join_missing": 0,
     "category_invalid": 0,
@@ -39,7 +42,7 @@
       "duplicate_ids": 0,
       "unparseable_replies": 0,
       "rule_assigned": 5,
-      "refunds_not_sent": 0
+      "refunds_not_sent": 1
     }
   },
   "grounding": {
@@ -49,11 +52,9 @@
       "unsupported": []
     },
     "reflection": {
-      "status": "regenerated",
-      "attempts": 2,
-      "unsupported": [
-        "4.9%"
-      ]
+      "status": "grounded",
+      "attempts": 1,
+      "unsupported": []
     }
   }
 }

@@ -19,9 +19,13 @@
         "amount": 19801.8,
         "pct_of_spend": 41.1
       },
+      "Travel/Transportation": {
+        "amount": 2008.15,
+        "pct_of_spend": 4.2
+      },
       "Other": {
-        "amount": 3348.15,
-        "pct_of_spend": 7.0
+        "amount": 1340.0,
+        "pct_of_spend": 2.8
       },
       "Dining": {
         "amount": 388.3,
