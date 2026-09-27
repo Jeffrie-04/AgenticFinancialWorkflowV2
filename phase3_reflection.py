@@ -1,7 +1,9 @@
 import json
 import os
 
+from afw.guards.grounding import fallback_reflection
 from afw.guards.pii import mask_strings
+from afw.narrative import COPY_EXACTLY, grounded_text, record_grounding
 from bedrock_client import call_model
 
 
@@ -31,7 +33,7 @@ First, analyze internally (do NOT include this reasoning in your response):
 Then, write the response for the owner, in this order:
 4. Open with a one-line overall verdict on the period (e.g. healthy surplus,
    or strained).
-5. State the 2-3 most important observations, each tied to a specific KPI.
+5. State the most important observations, each tied to a specific KPI.
 6. Give specific, actionable recommendations tied to those observations —
    what to maintain, what to watch, and what to improve.
 
@@ -43,6 +45,7 @@ EXPECTATIONS (what a good response looks like):
 
 NARROWING (hard rules — do not violate):
 - Do NOT state any number or figure not present in the provided KPIs.
+- {COPY_EXACTLY}
 - Do NOT describe trends, increases, decreases, or direction over time — you
   are given a single period only, so there is no trend to report. Describe the
   current state, not its direction.
@@ -57,7 +60,10 @@ KPIS:
     #Test if prompt was fully built correctly
     #print(reflection_prompt)
 
-    reflection_text = call_model(reflection_prompt).strip()
+    # The text is checked against the KPIs: regenerated once if a number isn't
+    # a KPI value, then replaced by a deterministic fallback.
+    reflection_text, outcome = grounded_text(reflection_prompt, kpis["kpis"], fallback_reflection, call_model)
+    record_grounding(outputs_dir, "reflection", outcome)
 
     # Save output
     os.makedirs(outputs_dir, exist_ok=True)

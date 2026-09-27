@@ -148,6 +148,8 @@ def test_codex_finding1_only_ok_rows_reach_any_prompt(tmp_path, monkeypatch):
     categorized = json.loads((outputs / "categorized.json").read_text())["categorized"]
     assert sorted(c["id"] for c in categorized) == sorted(ok_ids)
     assert dq["kpi_join"]["rows_in_kpis"] == 8
+    # The stub's narrative has no numbers, so both texts are grounded first time.
+    assert {k: v["status"] for k, v in dq["grounding"].items()} == {"summary": "grounded", "reflection": "grounded"}
 
 
 def summary_prompt(prompts):

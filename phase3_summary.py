@@ -1,7 +1,9 @@
 import json
 import os
 
+from afw.guards.grounding import fallback_summary
 from afw.guards.pii import mask_strings
+from afw.narrative import COPY_EXACTLY, grounded_text, record_grounding
 from bedrock_client import call_model
 
 
@@ -29,6 +31,7 @@ Cover, in a natural flow:
 
 Rules:
 - Use ONLY numbers present in the KPIs below. Do not invent or recompute any figure.
+- {COPY_EXACTLY}
 - Do NOT give recommendations or advice — that is a separate step.
 - Do NOT describe trends or changes over time — this is a single period.
 - Plain text only: one paragraph, no lists, no JSON, no markdown, ≤100 words.
@@ -38,7 +41,10 @@ KPIS:
 """
 
 
-    summary_text = call_model(prompt).strip()
+    # The text is checked against the KPIs: regenerated once if a number isn't
+    # a KPI value, then replaced by a deterministic fallback.
+    summary_text, outcome = grounded_text(prompt, kpis["kpis"], fallback_summary, call_model)
+    record_grounding(outputs_dir, "summary", outcome)
 
     # Save to outputs/summary.txt
     os.makedirs(outputs_dir, exist_ok=True)
