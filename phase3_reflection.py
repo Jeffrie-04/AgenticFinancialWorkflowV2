@@ -27,16 +27,16 @@ not to calculate anything.
 
 STEPS:
 First, analyze internally (do NOT include this reasoning in your response):
-1. Review all provided KPIs and understand the business's position.
-2. Identify which numbers are concerning and which are strong.
-3. Consider what likely drove those numbers (which categories, clients, costs).
+- Review all provided KPIs and understand the business's position.
+- Identify which numbers are concerning and which are strong.
+- Consider what likely drove those numbers (which categories, clients, costs).
 
 Then, write the response for the owner, in this order:
-4. Open with a one-line overall verdict on the period (e.g. healthy surplus,
-   or strained).
-5. State the most important observations, each tied to a specific KPI.
-6. Give specific, actionable recommendations tied to those observations —
-   what to maintain, what to watch, and what to improve.
+- Open with a one-line overall verdict on the period (e.g. healthy surplus,
+  or strained).
+- State the most important observations, each tied to a specific KPI.
+- Give specific, actionable recommendations tied to those observations —
+  what to maintain, what to watch, and what to improve.
 
 EXPECTATIONS (what a good response looks like):
 - Every observation and recommendation points to a specific KPI.

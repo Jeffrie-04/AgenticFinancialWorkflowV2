@@ -6,6 +6,7 @@ data_quality.json. call_model is always stubbed.
 """
 import json
 import os
+import re
 import shutil
 import subprocess
 
@@ -221,3 +222,17 @@ def test_attempts_file_is_git_ignored():
     for path in ("businesses/landscaper/outputs/narrative_attempts.json", "outputs/narrative_attempts.json"):
         result = subprocess.run(["git", "check-ignore", "-q", path], cwd=repo, check=False)
         assert result.returncode == 0, path
+
+
+def test_reflection_prompt_steps_are_unnumbered_bullets(outputs, monkeypatch):
+    prompts, _ = run_phase(phase3_reflection, outputs, monkeypatch, "Your business is healthy.")
+    prompt = prompts[0]
+    assert not re.search(r"(?m)^\s*\d+[.)]\s", prompt)  # nothing numbered for the model to echo
+    for step in ("- Review all provided KPIs and understand the business's position.",
+                 "- Identify which numbers are concerning and which are strong.",
+                 "- Consider what likely drove those numbers (which categories, clients, costs).",
+                 "- Open with a one-line overall verdict on the period (e.g. healthy surplus,",
+                 "- State the most important observations, each tied to a specific KPI.",
+                 "- Give specific, actionable recommendations tied to those observations —"):
+        assert step in prompt
+    assert "Keep the response under 150 words." in prompt  # word limit kept
