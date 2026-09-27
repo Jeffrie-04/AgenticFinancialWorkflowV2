@@ -1,8 +1,10 @@
 """
 Tests for afw/prompt_versions.py — categorizer prompts are versioned text
 files in prompts/. Each version fixes its own category list, so adding an
-enum value never changes an existing prompt. v1 is the production prompt;
-tests/fixtures/prompts/categorizer_prompt.txt pins its rendered bytes.
+enum value never changes an existing prompt. v2 is the production prompt
+(switched after the v1-vs-v2 eval); v1 stays frozen.
+tests/fixtures/prompts/categorizer_prompt.txt and categorizer_prompt_v2.txt
+pin their rendered bytes.
 """
 import difflib
 import json
@@ -25,8 +27,8 @@ def allowed_line(text):
     return line.split(": ", 1)[1].split(", ")
 
 
-def test_production_is_v1():
-    assert PRODUCTION_VERSION == "v1"
+def test_production_is_v2():
+    assert PRODUCTION_VERSION == "v2"
 
 
 @pytest.mark.parametrize("version", list(PROMPTS))
@@ -66,7 +68,7 @@ def test_build_prompt_defaults_to_production():
     assert cat_mod.build_prompt(rows) == cat_mod.build_prompt(rows, version=PRODUCTION_VERSION)
 
 
-def test_production_main_sends_the_v1_prompt(tmp_path, monkeypatch):
+def test_production_main_sends_the_v2_prompt(tmp_path, monkeypatch):
     rows = [{"id": "d1", "merchant": "Shop", "description": "Supplies", "direction": "DEBIT", "amount": "1.00",
              "date": "2024-10-01", "status": "OK", "reason": None, "is_refund": False, "refund_of": None}]
     (tmp_path / "ingested.json").write_text(json.dumps({"source_file": "t.csv", "transactions": rows}))
@@ -74,7 +76,9 @@ def test_production_main_sends_the_v1_prompt(tmp_path, monkeypatch):
     monkeypatch.setattr(cat_mod, "call_model",
                         lambda p: prompts.append(p) or '{"categorized": [{"id": "d1", "category": "Shopping"}]}')
     cat_mod.main(outputs_dir=str(tmp_path))
-    assert prompts == [cat_mod.build_prompt(rows, version="v1")]
+    assert prompts == [cat_mod.build_prompt(rows, version="v2")]
+    assert "Allowed categories (use these exact strings): Utilities, Shopping, Dining, " \
+        "Travel/Transportation, Other" in prompts[0]
 
 
 def test_categorize_takes_a_version_and_an_injected_model_call():

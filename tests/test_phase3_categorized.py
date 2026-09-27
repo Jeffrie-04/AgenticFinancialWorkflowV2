@@ -57,7 +57,14 @@ def test_prompt_is_byte_identical_to_golden():
     rows = [ok_row("a1b2-0", merchant="Oakwood HOA", description="Monthly contract", direction="CREDIT"),
             ok_row("c3d4-0", merchant='Café "Nero" <b>', description="Crew\ncoffee")]
     with open(GOLDEN_PROMPT, encoding="utf-8", newline="") as f:
-        assert cat_mod.build_prompt(rows) == f.read()
+        assert cat_mod.build_prompt(rows, version="v1") == f.read()  # v1 stays frozen
+
+
+def test_v2_prompt_is_byte_identical_to_its_golden():
+    rows = [ok_row("a1b2-0", merchant="Oakwood HOA", description="Monthly contract", direction="CREDIT"),
+            ok_row("c3d4-0", merchant='Café "Nero" <b>', description="Crew\ncoffee")]
+    with open(GOLDEN_PROMPT.replace(".txt", "_v2.txt"), encoding="utf-8", newline="") as f:
+        assert cat_mod.build_prompt(rows, version="v2") == f.read()
 
 
 def test_no_category_name_is_hardcoded():
@@ -236,7 +243,7 @@ def test_retry_sends_only_the_failing_ids(tmp_path, monkeypatch):
     prompts, written = run_categorizer(tmp_path, monkeypatch, THREE, [first, retry])
     assert block_ids(prompts[1]) == ["d2", "d3"]
     assert "d1" not in prompts[1]
-    assert "- d2: category is not one of: Utilities, Shopping, Dining, Other" in prompts[1]
+    assert "- d2: category is not one of: Utilities, Shopping, Dining, Travel/Transportation, Other" in prompts[1]  # production is v2
     assert "Groceries" not in prompts[1]  # model-written text is never echoed
     assert "- d3: missing from your reply" in prompts[1]
     assert written["categorized"] == [{"id": "d1", "category": "Shopping"}, {"id": "d2", "category": "Dining"},
@@ -291,7 +298,7 @@ def test_retry_never_echoes_the_model_category(tmp_path, monkeypatch, bad_catego
     reply = {"categorized": [{"id": "d1", "category": bad_category}]}
     prompts, _ = run_categorizer(tmp_path, monkeypatch, [ok_row("d1")], [reply, reply])
     assert bad_category not in prompts[1]
-    assert "- d1: category is not one of: Utilities, Shopping, Dining, Other" in prompts[1]
+    assert "- d1: category is not one of: Utilities, Shopping, Dining, Travel/Transportation, Other" in prompts[1]
 
 
 def test_repair_prompt_is_masked_and_delimited(tmp_path, monkeypatch):

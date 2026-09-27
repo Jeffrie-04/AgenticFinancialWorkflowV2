@@ -7,7 +7,8 @@ The category list is fixed per version, not derived from the Category enum,
 so adding an enum value never changes an existing prompt. Tests check that
 each file's "Allowed categories" line and guide lines match its list.
 
-v1 is the production prompt. Switching production is a separate decision.
+v2 is the production prompt, switched after the v1-vs-v2 eval (eval/RESULTS.md,
+ADR 0004). v1 stays frozen and reproducible for comparison.
 """
 import os
 from dataclasses import dataclass
@@ -48,12 +49,12 @@ PROMPTS = {
                         (Category.UTILITIES, Category.SHOPPING, Category.DINING, Category.OTHER)),
     # v2 adds Travel/Transportation (hotels, fuel and EV charging, airfare,
     # rideshare, tolls, parking), which v1 files under Other. Evaluated
-    # against v1 in eval/; production stays on v1 until that decision.
+    # against v1 in eval/ (eval/RESULTS.md); production since that eval.
     "v2": PromptVersion("v2", "categorize_v2.txt",
                         (Category.UTILITIES, Category.SHOPPING, Category.DINING,
                          Category.TRAVEL_TRANSPORTATION, Category.OTHER)),
 }
-PRODUCTION_VERSION = "v1"
+PRODUCTION_VERSION = "v2"
 
 
 def prompt_version(name):
