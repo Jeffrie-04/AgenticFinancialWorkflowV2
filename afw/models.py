@@ -51,8 +51,8 @@ class Category(str, Enum):
 
 
 # Only non-refund DEBITs are categorized by the model; non-refund CREDITs are
-# Income by rule, and refunds take their original DEBIT's category.
-DEBIT_CATEGORIES = tuple(c for c in Category if c is not Category.INCOME)
+# Income by rule, and refunds take their original DEBIT's category. Which
+# categories a prompt offers is fixed per prompt version (afw/prompt_versions.py).
 
 
 def direction_allows(direction, category):

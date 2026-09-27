@@ -43,11 +43,11 @@ def write_ingested(tmp_path, rows):
     (tmp_path / "ingested.json").write_text(json.dumps({"source_file": "t.csv", "transactions": rows}))
 
 
-def test_prompt_lists_every_debit_category_and_not_income():
+def test_prompt_lists_every_category_of_its_version_and_not_income():
+    from afw.prompt_versions import PROMPTS
     prompt = cat_mod.build_prompt([ok_row("a")])
-    for c in Category:
-        if c is not Category.INCOME:
-            assert f"- {c.value}:" in prompt
+    for c in PROMPTS["v1"].categories:
+        assert f"- {c.value}:" in prompt
     assert Category.INCOME.value not in prompt  # only DEBITs are sent; Income is rule-assigned
 
 

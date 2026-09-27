@@ -72,14 +72,16 @@ class ReplyCheck:
     error: str | None = None  # the reply as a whole was unusable
 
 
-def check_reply(obj, sent):
+def check_reply(obj, sent, allowed=None):
     """Validate a parsed categorizer reply against the rows sent in this
-    request (sent: id -> row with "direction"). Every sent id ends up in
-    exactly one of accepted or failures:
+    request (sent: id -> row with "direction"). `allowed` is the set of
+    categories the prompt version offered (default: every category). Every
+    sent id ends up in exactly one of accepted or failures:
 
     - llm_missing: no well-formed item for the id
     - llm_conflict: the id came back with different categories
-    - llm_invalid_category: the category isn't a Category value
+    - llm_invalid_category: the category isn't a Category value, or isn't
+      one this prompt version offered
     - category_direction_mismatch: e.g. a DEBIT categorized as Income
 
     Malformed items (null, non-object, non-string id or category) and ids
@@ -115,6 +117,8 @@ def check_reply(obj, sent):
             result.failures[row_id] = "llm_invalid_category"
         elif not direction_allows(row["direction"], categories[0]):
             result.failures[row_id] = "category_direction_mismatch"
+        elif allowed is not None and categories[0] not in allowed:
+            result.failures[row_id] = "llm_invalid_category"
         else:
             result.accepted[row_id] = categories[0]
             result.counts["duplicate_ids"] += len(categories) - 1
