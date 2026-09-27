@@ -1,13 +1,18 @@
-import os
 import json
 import math
+import os
+import random
+import time
+
 import anthropic
 import boto3
 import openai
+from anthropic import Anthropic
 from botocore import exceptions as boto_exceptions
 from botocore.config import Config
 from openai import OpenAI
-from anthropic import Anthropic
+
+from afw.retry import with_retries
 
 try:
     from dotenv import load_dotenv
@@ -27,7 +32,18 @@ OPENAI_MODEL_ID = "us.openai.gpt-5.6-terra"
 CLAUDE_MODEL_ID = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
 ANTHROPIC_MODEL_ID = "claude-haiku-4-5"  # direct API alias — no date suffix
 
-CLAUDE_CONFIG = Config(read_timeout=180, connect_timeout=60, retries={'max_attempts': 2})
+# Seconds per attempt, for all three clients. A timeout is a temporary error,
+# so call_model retries it under afw/retry.py.
+MODEL_TIMEOUT = 60
+
+# The SDKs' own retries are off (one attempt each): call_model's retry policy
+# is the only one, so retries never multiply.
+CLAUDE_CONFIG = Config(read_timeout=MODEL_TIMEOUT, connect_timeout=MODEL_TIMEOUT,
+                       retries={'total_max_attempts': 1, 'mode': 'standard'})
+
+# Injected into afw.retry.with_retries; tests replace them so nothing sleeps.
+_sleep = time.sleep
+_rand = random.random
 
 
 # ------------------------------------------- temporary vs. permanent errors
@@ -96,8 +112,25 @@ def _retry_after(exc):
     return _seconds(headers.get("retry-after"))
 
 
+# ------------------------------------------------------------------ clients
+
+
+def _openai_client():
+    # Reads OPENAI_API_KEY / OPENAI_BASE_URL from the environment.
+    return OpenAI(max_retries=0, timeout=MODEL_TIMEOUT)
+
+
+def _anthropic_client():
+    # Reads ANTHROPIC_API_KEY from the environment.
+    return Anthropic(max_retries=0, timeout=MODEL_TIMEOUT)
+
+
+def _bedrock_client():
+    return boto3.client('bedrock-runtime', region_name='us-east-1', config=CLAUDE_CONFIG)
+
+
 def _call_openai(prompt):
-    client = OpenAI()  # reads OPENAI_API_KEY / OPENAI_BASE_URL from the environment
+    client = _openai_client()
     response = client.chat.completions.create(
         model=OPENAI_MODEL_ID,
         temperature=0,
@@ -107,7 +140,7 @@ def _call_openai(prompt):
 
 
 def _call_claude(prompt):
-    bedrock = boto3.client('bedrock-runtime', region_name='us-east-1', config=CLAUDE_CONFIG)
+    bedrock = _bedrock_client()
     response = bedrock.invoke_model(
         modelId=CLAUDE_MODEL_ID,
         contentType='application/json',
@@ -124,7 +157,7 @@ def _call_claude(prompt):
 
 
 def _call_anthropic_direct(prompt):
-    client = Anthropic()  # reads ANTHROPIC_API_KEY from the environment
+    client = _anthropic_client()
     # NOTE: `temperature` is not a valid Messages.create() parameter in the
     # installed anthropic SDK (1.6.0) — it's been removed from the Messages
     # API entirely, not just rejected for certain models. Confirmed via
@@ -137,9 +170,17 @@ def _call_anthropic_direct(prompt):
     return response.content[0].text
 
 
-def call_model(prompt):
+def _dispatch(prompt):
     if MODEL_PROVIDER == "claude":
         return _call_claude(prompt)
     if MODEL_PROVIDER == "anthropic_direct":
         return _call_anthropic_direct(prompt)
     return _call_openai(prompt)
+
+
+def call_model(prompt):
+    """The model's reply to prompt. Temporary errors are retried (afw/retry.py);
+    a permanent error, or the last temporary one, is raised unchanged."""
+    return with_retries(lambda: _dispatch(prompt), is_transient=_is_transient,
+                        retry_after=_retry_after, status_of=_status_of,
+                        sleep=_sleep, rand=_rand)
