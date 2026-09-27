@@ -122,7 +122,7 @@ def test_v2_offers_travel_and_v1_does_not():
 
 def test_v2_defines_travel_and_other_no_longer_covers_it():
     text = template_text("v2")
-    assert (f"- {TRAVEL}: hotels (including Airbnb, hostels), gas and EV charging, airfare, "
+    assert (f"- {TRAVEL}: hotels (including Airbnb, hostels), gasoline and EV charging, airfare, "
             "rideshare (Uber, Lyft), tolls, parking") in text
     other = next(l for l in text.splitlines() if l.startswith("- Other:"))
     for moved in ("transportation", "fuel", "travel"):

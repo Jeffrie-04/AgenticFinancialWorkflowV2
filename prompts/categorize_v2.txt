@@ -6,7 +6,7 @@ Allowed categories (use these exact strings): Utilities, Shopping, Dining, Trave
 - Utilities: recurring services and bills: software/SaaS, rent, insurance, phone, electric, gas, water, internet, payroll, professional services
 - Shopping: retail and supplies: office supplies, equipment, furniture, materials
 - Dining: food and beverages: coffee, restaurants, food delivery, catering
-- Travel/Transportation: hotels (including Airbnb, hostels), gas and EV charging, airfare, rideshare (Uber, Lyft), tolls, parking
+- Travel/Transportation: hotels (including Airbnb, hostels), gasoline and EV charging, airfare, rideshare (Uber, Lyft), tolls, parking
 - Other: shipping, entertainment, bank and processing fees, waste services, anything else
 
 Each transaction has an id, a merchant, a description, and a direction:
