@@ -588,6 +588,17 @@ class TestCategorizerReview:
         assert report["llm"] == {}
 
 
+class TestTravelTransportation:
+    def test_join_accepts_travel_and_kpis_count_it_as_discretionary(self, tmp_path):
+        kpis, report = run_main(tmp_path, [RENT[0], ing("f", "Delta Air Lines", "400.00", "DEBIT")],
+                                [RENT[1], cat("f", "Travel/Transportation")])
+        assert report["category_invalid"] == 0 and report["rows_in_kpis"] == 2
+        assert kpis["spend_by_category"]["Travel/Transportation"] == {"amount": 400.0, "pct_of_spend": 28.6}
+        assert kpis["fixed_vs_discretionary"] == {"fixed_spend": 1000.0, "discretionary_spend": 400.0,
+                                                  "fixed_pct": 71.4}
+        assert "Travel/Transportation" in kpis_mod.DISCRETIONARY_CATEGORIES
+
+
 class TestRefundNetting:
     def test_refund_nets_against_original_debit_category(self, tmp_path):
         kpis, _ = run_main(tmp_path, [

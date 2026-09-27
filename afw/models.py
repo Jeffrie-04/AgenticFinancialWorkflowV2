@@ -47,6 +47,7 @@ class Category(str, Enum):
     UTILITIES = "Utilities"
     SHOPPING = "Shopping"
     DINING = "Dining"
+    TRAVEL_TRANSPORTATION = "Travel/Transportation"
     OTHER = "Other"
 
 

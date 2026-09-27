@@ -4,6 +4,7 @@ files in prompts/. Each version fixes its own category list, so adding an
 enum value never changes an existing prompt. v1 is the production prompt;
 tests/fixtures/prompts/categorizer_prompt.txt pins its rendered bytes.
 """
+import difflib
 import json
 
 import pytest
@@ -106,3 +107,54 @@ def test_direction_is_still_checked_before_the_allowed_set():
 def test_repair_text_lists_the_version_categories():
     assert cat_mod.problem_text("llm_invalid_category", "v1") == \
         "category is not one of: Utilities, Shopping, Dining, Other"
+
+
+# ------------------------------------------------ Travel/Transportation and v2
+
+TRAVEL = "Travel/Transportation"
+
+
+def test_v2_offers_travel_and_v1_does_not():
+    assert TRAVEL in PROMPTS["v2"].allowed
+    assert TRAVEL not in PROMPTS["v1"].allowed
+    assert [c.value for c in PROMPTS["v2"].categories] == ["Utilities", "Shopping", "Dining", TRAVEL, "Other"]
+
+
+def test_v2_defines_travel_and_other_no_longer_covers_it():
+    text = template_text("v2")
+    assert (f"- {TRAVEL}: hotels (including Airbnb, hostels), gas and EV charging, airfare, "
+            "rideshare (Uber, Lyft), tolls, parking") in text
+    other = next(l for l in text.splitlines() if l.startswith("- Other:"))
+    for moved in ("transportation", "fuel", "travel"):
+        assert moved not in other
+
+
+def test_v2_differs_from_v1_only_in_the_category_lines():
+    v1, v2 = template_text("v1").splitlines(), template_text("v2").splitlines()
+    changed = [line[2:] for line in difflib.ndiff(v1, v2) if line.startswith(("- ", "+ "))]
+    # Removed: v1's allowed line and Other line. Added: v2's allowed line, the
+    # Travel/Transportation line and the narrower Other line.
+    assert len(changed) == 5
+    assert all(line.startswith(("Allowed categories", "- ")) for line in changed)
+
+
+def reply(category):
+    return lambda prompt: json.dumps({"categorized": [{"id": "d1", "category": category}]})
+
+
+ROW = [{"id": "d1", "merchant": "Delta Air Lines", "description": "Flight to Chicago", "direction": "DEBIT"}]
+
+
+def test_travel_reply_is_invalid_under_v1():
+    accepted, failures, _, _ = cat_mod.categorize(ROW, version="v1", call=reply(TRAVEL))
+    assert (accepted, failures) == ({}, {"d1": "llm_invalid_category"})
+
+
+def test_travel_reply_is_accepted_under_v2():
+    accepted, failures, _, _ = cat_mod.categorize(ROW, version="v2", call=reply(TRAVEL))
+    assert (accepted, failures) == ({"d1": TRAVEL}, {})
+
+
+def test_v2_repair_text_lists_travel():
+    assert cat_mod.problem_text("llm_invalid_category", "v2") == \
+        f"category is not one of: Utilities, Shopping, Dining, {TRAVEL}, Other"

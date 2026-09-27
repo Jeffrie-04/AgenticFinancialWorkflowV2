@@ -46,6 +46,12 @@ def _template(path):
 PROMPTS = {
     "v1": PromptVersion("v1", "categorize_v1.txt",
                         (Category.UTILITIES, Category.SHOPPING, Category.DINING, Category.OTHER)),
+    # v2 adds Travel/Transportation (hotels, fuel and EV charging, airfare,
+    # rideshare, tolls, parking), which v1 files under Other. Evaluated
+    # against v1 in eval/; production stays on v1 until that decision.
+    "v2": PromptVersion("v2", "categorize_v2.txt",
+                        (Category.UTILITIES, Category.SHOPPING, Category.DINING,
+                         Category.TRAVEL_TRANSPORTATION, Category.OTHER)),
 }
 PRODUCTION_VERSION = "v1"
 

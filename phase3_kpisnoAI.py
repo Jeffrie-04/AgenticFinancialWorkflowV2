@@ -34,7 +34,8 @@ from afw.models import Category, Direction, Status, direction_allows
 # insurance, and bills — costs owed regardless of revenue.
 # (.value: rows carry plain strings, and a str-Enum member hashes by name.)
 FIXED_CATEGORIES = {Category.UTILITIES.value}
-DISCRETIONARY_CATEGORIES = {Category.DINING.value, Category.SHOPPING.value, Category.OTHER.value}
+DISCRETIONARY_CATEGORIES = {Category.DINING.value, Category.SHOPPING.value,
+                            Category.TRAVEL_TRANSPORTATION.value, Category.OTHER.value}
 
 # Reasons a source row that passed ingest is still left out of the KPIs. The
 # llm_* reasons and category_direction_mismatch are decided by the
