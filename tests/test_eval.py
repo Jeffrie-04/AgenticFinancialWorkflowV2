@@ -255,6 +255,94 @@ def test_main_writes_results_json(tmp_path, dirs, monkeypatch):
     assert len(saved["gold_sha256"]) == 64
 
 
+# ------------------------------------------------------------------ --offline
+
+ANSWERS = {"a1": TRAVEL, "a2": "Shopping", "a3": "Utilities", "b1": TRAVEL, "b2": "Dining", "b3": "Other"}
+
+
+@pytest.fixture
+def no_live_model(monkeypatch):
+    """Offline mode must never reach the real model or read the env identity."""
+    import bedrock_client
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("offline mode reached the live model or the env identity")
+    monkeypatch.setattr(bedrock_client, "call_model", refuse)
+    monkeypatch.setattr(run_eval, "model_identity", refuse)
+
+
+def record_online(tmp_path, dirs, monkeypatch, version="v2", generated_at="2000-01-02"):
+    """A normal (online) run with a stub model, then pin generated_at to a past date."""
+    gold = write_gold(tmp_path / "gold.csv", GOLD)
+    with monkeypatch.context() as m:
+        m.setattr(run_eval, "model_identity", lambda: IDENTITY)
+        run_eval.main(["--version", version, "--gold", gold], call=Model(dict(ANSWERS)), **dirs)
+    path = os.path.join(dirs["results_dir"], f"{version}.json")
+    with open(path) as f:
+        saved = json.load(f)
+    saved["generated_at"] = generated_at
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(saved, f, indent=2)
+    return gold, path, saved
+
+
+def test_offline_replays_from_the_cache_with_the_recorded_identity_and_date(tmp_path, dirs, monkeypatch,
+                                                                            no_live_model):
+    gold, path, recorded = record_online(tmp_path, dirs, monkeypatch)
+
+    run_eval.main(["--version", "v2", "--gold", gold, "--offline"], **dirs)
+
+    with open(path) as f:
+        replayed = json.load(f)
+    assert (replayed["provider"], replayed["model"], replayed["endpoint"]) == IDENTITY
+    assert replayed["generated_at"] == "2000-01-02"  # when the replies were generated, not today
+    assert (replayed["calls"], replayed["cache_hits"]) == (0, 2)
+    assert {k: v for k, v in replayed.items() if k not in ("calls", "cache_hits")} == \
+        {k: v for k, v in recorded.items() if k not in ("calls", "cache_hits")}
+
+
+def test_offline_cache_miss_is_an_error_and_calls_nothing(tmp_path, dirs, monkeypatch, no_live_model):
+    gold, path, recorded = record_online(tmp_path, dirs, monkeypatch)
+    changed = [row if row[0] != "a2" else ("a2", "alpha", "Office Depot", "Toner", "80.00", "Shopping")
+               for row in GOLD]
+    gold = write_gold(tmp_path / "gold.csv", changed)  # alpha's prompt changes: a miss
+
+    with pytest.raises(SystemExit) as raised:
+        run_eval.main(["--version", "v2", "--gold", gold, "--offline"], **dirs)
+
+    message = str(raised.value)
+    assert message.startswith("offline: cache miss for v2 (")
+    assert "run without --offline" in message
+    with open(path) as f:
+        assert json.load(f) == recorded  # results left untouched
+    assert len(os.listdir(os.path.join(dirs["cache_dir"], "v2"))) == 2  # nothing added
+
+
+def test_offline_ignores_the_environment_identity(tmp_path, dirs, monkeypatch, no_live_model):
+    import bedrock_client
+    gold, path, _ = record_online(tmp_path, dirs, monkeypatch)
+    monkeypatch.setattr(bedrock_client, "MODEL_PROVIDER", "claude")
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://elsewhere.example/v1")
+
+    run_eval.main(["--version", "v2", "--gold", gold, "--offline"], **dirs)
+
+    with open(path) as f:
+        assert json.load(f)["provider"] == "stub_provider"
+
+
+def test_offline_without_recorded_results_is_an_error(tmp_path, dirs, no_live_model):
+    gold = write_gold(tmp_path / "gold.csv", GOLD)
+    with pytest.raises(SystemExit) as raised:
+        run_eval.main(["--version", "v2", "--gold", gold, "--offline"], **dirs)
+    assert "no recorded results" in str(raised.value)
+    assert not os.path.exists(dirs["cache_dir"])
+
+
+def test_offline_requires_a_version(tmp_path, dirs):
+    with pytest.raises(SystemExit):
+        run_eval.main(["--offline"], **dirs)
+
+
 def test_compare_writes_results_md(tmp_path, dirs):
     gold = write_gold(tmp_path / "gold.csv", GOLD)
     v1 = run_eval.evaluate(gold, "v1", call=Model({"a1": "Other", "a2": "Shopping", "a3": "Utilities",

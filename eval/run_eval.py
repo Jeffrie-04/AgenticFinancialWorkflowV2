@@ -4,6 +4,7 @@ eval/run_eval.py — score a categorizer prompt version against the gold set.
     ./venv/bin/python eval/run_eval.py --version v1
     ./venv/bin/python eval/run_eval.py --version v2
     ./venv/bin/python eval/run_eval.py --compare      # writes eval/RESULTS.md
+    ./venv/bin/python eval/run_eval.py --version v2 --offline   # replay only (CI)
 
 Labeled gold rows are sent through the real categorizer path
 (phase3_categorized.categorize: PII masking, reply validation and the one
@@ -14,6 +15,11 @@ Model replies are cached in eval/cache/<version>/, keyed by a hash of the
 provider, the model id, the (non-secret) endpoint and the full prompt, which
 contains the rows. A re-run costs nothing and reproduces the same numbers.
 API keys are never part of the key.
+
+--offline replays a recorded run without any model: the identity and
+generated_at come from the recorded results/<version>.json (not the
+environment), and any cache miss is an error. CI uses it to check that
+the committed cache still reproduces the committed results.
 
 Scoring:
 - A gold label the version doesn't offer counts as Other for that version
@@ -88,6 +94,14 @@ def cached(call, identity, directory, stats):
             f.write(reply)
         return reply
     return wrapped
+
+
+def offline_call(version, identity):
+    """The model call for --offline: every prompt must already be cached."""
+    def miss(prompt):
+        raise SystemExit(f"offline: cache miss for {version} ({cache_key(identity, prompt)[:12]}); "
+                         "run without --offline to call the model")
+    return miss
 
 
 def load_gold(path):
@@ -242,6 +256,8 @@ def main(argv=None, call=None, cache_dir=DEFAULT_CACHE, results_dir=DEFAULT_RESU
     parser.add_argument("--version", choices=list(PROMPTS))
     parser.add_argument("--gold", default=DEFAULT_GOLD)
     parser.add_argument("--compare", action="store_true", help="write RESULTS.md from results/v1.json and v2.json")
+    parser.add_argument("--offline", action="store_true",
+                        help="replay the recorded run from the cache only; any cache miss is an error")
     args = parser.parse_args(argv)
 
     if args.compare:
@@ -266,13 +282,24 @@ def main(argv=None, call=None, cache_dir=DEFAULT_CACHE, results_dir=DEFAULT_RESU
     if not args.version:
         parser.error("--version is required unless --compare is given")
 
-    if call is None:
-        import bedrock_client
-        call = bedrock_client.call_model
-    result = evaluate(args.gold, args.version, call, model_identity(), cache_dir)
-    result["generated_at"] = datetime.now(timezone.utc).date().isoformat()
-    os.makedirs(results_dir, exist_ok=True)
     path = os.path.join(results_dir, f"{args.version}.json")
+    if args.offline:
+        if not os.path.exists(path):
+            raise SystemExit(f"offline: no recorded results to replay at {path}; run without --offline first")
+        with open(path, encoding="utf-8") as f:
+            recorded = json.load(f)
+        identity = (recorded["provider"], recorded["model"], recorded["endpoint"])
+        call = offline_call(args.version, identity)
+        generated_at = recorded["generated_at"]  # when the cached replies were generated
+    else:
+        if call is None:
+            import bedrock_client
+            call = bedrock_client.call_model
+        identity = model_identity()
+        generated_at = datetime.now(timezone.utc).date().isoformat()
+    result = evaluate(args.gold, args.version, call, identity, cache_dir)
+    result["generated_at"] = generated_at
+    os.makedirs(results_dir, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2)
     print(f"{args.version}: accuracy {_pct(result['accuracy'])} on {result['labeled']} labeled rows "
