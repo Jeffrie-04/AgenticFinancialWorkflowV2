@@ -7,6 +7,7 @@ data_quality.json. call_model is always stubbed.
 import json
 import os
 import shutil
+import subprocess
 
 import pytest
 
@@ -45,7 +46,7 @@ def scripted(*replies):
 
 def test_grounded_first_reply_makes_one_call():
     call, prompts = scripted(GOOD_SUMMARY)
-    text, outcome = grounded_text("PROMPT", KPIS, fallback_summary, call)
+    text, outcome, _ = grounded_text("PROMPT", KPIS, fallback_summary, call)
     assert text == GOOD_SUMMARY.strip()
     assert outcome == {"status": "grounded", "attempts": 1, "unsupported": []}
     assert len(prompts) == 1
@@ -53,7 +54,7 @@ def test_grounded_first_reply_makes_one_call():
 
 def test_ungrounded_reply_is_regenerated_once_with_a_fixed_message():
     call, prompts = scripted(BAD_SUMMARY, GOOD_SUMMARY)
-    text, outcome = grounded_text("PROMPT", KPIS, fallback_summary, call)
+    text, outcome, _ = grounded_text("PROMPT", KPIS, fallback_summary, call)
     assert text == GOOD_SUMMARY.strip()
     assert outcome == {"status": "regenerated", "attempts": 2, "unsupported": ["8.0%"]}
     assert len(prompts) == 2
@@ -68,7 +69,7 @@ def test_ungrounded_reply_is_regenerated_once_with_a_fixed_message():
 def test_ungrounded_twice_gives_the_fallback():
     still_bad = "Utilities were about 51% and the rest made up 33%."  # 51% is 51.1 at 0 dp; 33% is no KPI
     call, prompts = scripted(BAD_SUMMARY, still_bad)
-    text, outcome = grounded_text("PROMPT", KPIS, fallback_summary, call)
+    text, outcome, _ = grounded_text("PROMPT", KPIS, fallback_summary, call)
     assert text == fallback_summary(KPIS)
     assert text.startswith(FALLBACK_SUMMARY_MARKER)
     assert check_grounding(text, KPIS).ok
@@ -79,7 +80,7 @@ def test_ungrounded_twice_gives_the_fallback():
 @pytest.mark.parametrize("empty", ["", "   \n", None])
 def test_empty_or_non_text_reply_counts_as_a_failure(empty):
     call, _ = scripted(empty, empty)
-    text, outcome = grounded_text("PROMPT", KPIS, fallback_summary, call)
+    text, outcome, _ = grounded_text("PROMPT", KPIS, fallback_summary, call)
     assert outcome["status"] == "fallback"
     assert text == fallback_summary(KPIS)
 
@@ -95,7 +96,7 @@ def test_masked_names_the_model_saw_are_not_numbers():
     # The prompt shows the top merchant masked; the model repeats it that way.
     kpis = {**KPIS, "top_merchants": ["Zelle jane@x.com 5555 - 5555 - 5555 - 4444", "Toro Dealer", "Shell Gas"]}
     call, prompts = scripted("The largest merchant was Zelle [EMAIL] ****4444.")
-    _, outcome = grounded_text("PROMPT", kpis, fallback_summary, call)
+    _, outcome, _ = grounded_text("PROMPT", kpis, fallback_summary, call)
     assert outcome["status"] == "grounded"
     assert len(prompts) == 1
 
@@ -153,3 +154,70 @@ def test_phase_creates_data_quality_if_missing(tmp_path, monkeypatch):
     phase3_summary.main(outputs_dir=str(tmp_path))
     dq = json.loads((tmp_path / "data_quality.json").read_text())
     assert dq["grounding"]["summary"]["status"] == "grounded"
+
+
+# ------------------------------------------ display KPIs in prompts; attempts
+
+
+@pytest.mark.parametrize("module,replies", [(phase3_summary, [GOOD_SUMMARY]),
+                                            (phase3_reflection, ["Your business is healthy."])])
+def test_prompts_show_display_formatted_kpis(outputs, monkeypatch, module, replies):
+    prompts, _ = run_phase(module, outputs, monkeypatch, *replies)
+    assert '"total_income": "$58,860.00"' in prompts[0]
+    assert '"pct_of_spend": "51.1%"' in prompts[0]
+    assert '"period_days": 28' in prompts[0]
+    assert "58860.0" not in prompts[0]  # no raw JSON floats for the model to copy
+
+
+def test_prompts_still_mask_names(outputs, monkeypatch):
+    data = json.loads((outputs / "kpis.json").read_text())
+    data["kpis"]["top_merchants"][0] = "Zelle jane@x.com"
+    (outputs / "kpis.json").write_text(json.dumps(data))
+    prompts, _ = run_phase(phase3_summary, outputs, monkeypatch, GOOD_SUMMARY)
+    assert "jane@x.com" not in prompts[0] and "Zelle [EMAIL]" in prompts[0]
+
+
+def attempts(outputs):
+    return json.loads((outputs / "narrative_attempts.json").read_text())
+
+
+def test_rejected_attempts_are_saved_for_debugging(outputs, monkeypatch):
+    run_phase(phase3_summary, outputs, monkeypatch, BAD_SUMMARY, GOOD_SUMMARY)
+    assert attempts(outputs)["summary"] == [{"attempt": 1, "text": BAD_SUMMARY.strip(), "unsupported": ["8.0%"]}]
+
+    bad = "Income was about 59,000 and spend about 48,000."
+    run_phase(phase3_reflection, outputs, monkeypatch, bad, "Still about 2 things.")
+    saved = attempts(outputs)
+    assert saved["reflection"] == [{"attempt": 1, "text": bad, "unsupported": ["59,000", "48,000"]},
+                                   {"attempt": 2, "text": "Still about 2 things.", "unsupported": ["2"]}]
+    assert saved["summary"][0]["attempt"] == 1  # the other narrative's attempts are kept
+
+
+def test_grounded_run_clears_stale_attempts(outputs, monkeypatch):
+    run_phase(phase3_summary, outputs, monkeypatch, BAD_SUMMARY, GOOD_SUMMARY)
+    run_phase(phase3_summary, outputs, monkeypatch, GOOD_SUMMARY)
+    assert attempts(outputs)["summary"] == []
+
+
+def test_attempts_file_is_never_read_into_a_prompt():
+    repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    readers = []
+    for name in os.listdir(repo):
+        if name.endswith(".py"):
+            with open(os.path.join(repo, name)) as f:
+                if "narrative_attempts" in f.read():
+                    readers.append(name)
+    for root, _, files in os.walk(os.path.join(repo, "afw")):
+        for name in files:
+            if name.endswith(".py"):
+                with open(os.path.join(root, name)) as f:
+                    if "narrative_attempts" in f.read():
+                        readers.append(name)
+    assert readers == ["narrative.py"]  # only the writer knows the file
+
+
+def test_attempts_file_is_git_ignored():
+    repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    for path in ("businesses/landscaper/outputs/narrative_attempts.json", "outputs/narrative_attempts.json"):
+        result = subprocess.run(["git", "check-ignore", "-q", path], cwd=repo, check=False)
+        assert result.returncode == 0, path

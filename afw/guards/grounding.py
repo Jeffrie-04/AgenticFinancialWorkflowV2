@@ -49,6 +49,29 @@ class Grounding:
     unsupported: list = field(default_factory=list)  # normalized tokens, e.g. "8.0%", "$746", "2"
 
 
+def _kind(key):
+    """A KPI number's type, from its key: the one rule shared by display and matching."""
+    return "percent" if key and "pct" in key else "count" if key in COUNT_KEYS else "money"
+
+
+def display_kpis(value, key=None):
+    """The KPIs as the narrative prompts show them: money as $58,860.00 (or
+    -$2,204.05), percentages as 51.1%, counts as plain integers; names and
+    other strings unchanged. Every displayed form passes check_grounding."""
+    if isinstance(value, dict):
+        return {k: display_kpis(v, k) for k, v in value.items()}
+    if isinstance(value, list):
+        return [display_kpis(v, key) for v in value]
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return value
+    kind = _kind(key)
+    if kind == "percent":
+        return f"{value:.1f}%"
+    if kind == "count":
+        return int(value)
+    return f"-${abs(value):,.2f}" if value < 0 else f"${value:,.2f}"
+
+
 def _kpi_values(kpis):
     """Magnitudes of every number in the KPIs, grouped by type."""
     values = {"percent": set(), "money": set(), "count": set()}
@@ -57,8 +80,7 @@ def _kpi_values(kpis):
         if isinstance(obj, bool):
             return
         if isinstance(obj, (int, float)):
-            kind = "percent" if key and "pct" in key else "count" if key in COUNT_KEYS else "money"
-            values[kind].add(abs(Decimal(str(obj))))
+            values[_kind(key)].add(abs(Decimal(str(obj))))
         elif isinstance(obj, dict):
             for k, v in obj.items():
                 walk(v, k)

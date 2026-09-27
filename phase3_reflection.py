@@ -1,7 +1,7 @@
 import json
 import os
 
-from afw.guards.grounding import fallback_reflection
+from afw.guards.grounding import display_kpis, fallback_reflection
 from afw.guards.pii import mask_strings
 from afw.narrative import COPY_EXACTLY, grounded_text, record_grounding
 from bedrock_client import call_model
@@ -11,7 +11,8 @@ def main(outputs_dir="outputs"):
     # Load inputs
     with open(os.path.join(outputs_dir, "kpis.json"), "r") as f:
         kpis = json.load(f)
-    kpis_json = json.dumps(mask_strings(kpis), indent=2)  # prompt copy only; kpis.json keeps the text
+    # Prompt copy only: display-formatted numbers and PII-masked names; kpis.json is unchanged.
+    kpis_json = json.dumps(mask_strings(display_kpis(kpis)), indent=2)
 
     # ----- INSERT YOUR FINAL REFLECTION PROMPT HERE -----
     reflection_prompt = f"""ROLE:
@@ -62,8 +63,8 @@ KPIS:
 
     # The text is checked against the KPIs: regenerated once if a number isn't
     # a KPI value, then replaced by a deterministic fallback.
-    reflection_text, outcome = grounded_text(reflection_prompt, kpis["kpis"], fallback_reflection, call_model)
-    record_grounding(outputs_dir, "reflection", outcome)
+    reflection_text, outcome, rejected = grounded_text(reflection_prompt, kpis["kpis"], fallback_reflection, call_model)
+    record_grounding(outputs_dir, "reflection", outcome, rejected)
 
     # Save output
     os.makedirs(outputs_dir, exist_ok=True)

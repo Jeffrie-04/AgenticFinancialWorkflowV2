@@ -16,6 +16,7 @@ from afw.guards.grounding import (
     FALLBACK_REFLECTION_MARKER,
     FALLBACK_SUMMARY_MARKER,
     check_grounding,
+    display_kpis,
     fallback_reflection,
     fallback_summary,
 )
@@ -196,3 +197,49 @@ def test_fallbacks_omit_sentences_without_data():
     assert "largest spending category" not in fallback_summary(nothing)
     assert "top client" not in fallback_summary(nothing)
     assert "top client" not in fallback_reflection(nothing)
+
+
+# ------------------------------------------------ display-formatted KPIs
+
+
+def leaves(value):
+    if isinstance(value, dict):
+        for v in value.values():
+            yield from leaves(v)
+    elif isinstance(value, list):
+        for v in value:
+            yield from leaves(v)
+    else:
+        yield value
+
+
+def test_display_formats_money_percent_and_counts():
+    shown = display_kpis(LANDSCAPER)
+    assert shown["total_income"] == "$58,860.00"
+    assert shown["average_expense"] == "$1,504.60"
+    assert shown["spend_by_category"]["Utilities"] == {"amount": "$24,609.00", "pct_of_spend": "51.1%"}
+    assert shown["income_concentration"]["top3_clients_pct"] == "48.6%"
+    assert shown["income_concentration"]["num_income_sources"] == 10
+    assert shown["burn_rate"]["period_days"] == 28 and shown["burn_rate"]["unparseable_dates"] == 0
+    assert shown["top_merchants"] == LANDSCAPER["top_merchants"] and shown["status"] == "surplus"
+    assert display_kpis(kpis_of("restaurant"))["net_cash_flow"] == "-$2,204.05"
+
+
+def test_display_handles_the_kpis_json_wrapper():
+    assert display_kpis({"kpis": LANDSCAPER})["kpis"]["total_spend"] == "$48,147.25"
+
+
+@pytest.mark.parametrize("name", list(ALL_KPIS))
+def test_every_displayed_value_passes_grounding(name):
+    kpis = ALL_KPIS[name]
+    text = " ; ".join(str(v) for v in leaves(display_kpis(kpis)) if v is not None)
+    result = check_grounding(text, kpis)
+    assert result.ok, (name, result.unsupported)
+
+
+def test_model_text_copying_display_values_passes():
+    text = ("Income was $58,860.00 against spend of $48,147.25, a surplus of $10,712.75 over 28 days. "
+            "Utilities took $24,609.00 (51.1%), Shopping $19,801.80 (41.1%), Other $3,348.15 (7.0%) "
+            "and Dining $388.30 (0.8%). The top client provided 21.2% and the top clients 48.6% "
+            "across 10 income sources; average expense $1,504.60, daily $1,719.54.")
+    assert check_grounding(text, LANDSCAPER).ok, check_grounding(text, LANDSCAPER).unsupported

@@ -1,7 +1,7 @@
 import json
 import os
 
-from afw.guards.grounding import fallback_summary
+from afw.guards.grounding import display_kpis, fallback_summary
 from afw.guards.pii import mask_strings
 from afw.narrative import COPY_EXACTLY, grounded_text, record_grounding
 from bedrock_client import call_model
@@ -37,14 +37,14 @@ Rules:
 - Plain text only: one paragraph, no lists, no JSON, no markdown, ≤100 words.
 
 KPIS:
-{json.dumps(mask_strings(kpis), indent=2)}
+{json.dumps(mask_strings(display_kpis(kpis)), indent=2)}
 """
 
 
     # The text is checked against the KPIs: regenerated once if a number isn't
     # a KPI value, then replaced by a deterministic fallback.
-    summary_text, outcome = grounded_text(prompt, kpis["kpis"], fallback_summary, call_model)
-    record_grounding(outputs_dir, "summary", outcome)
+    summary_text, outcome, rejected = grounded_text(prompt, kpis["kpis"], fallback_summary, call_model)
+    record_grounding(outputs_dir, "summary", outcome, rejected)
 
     # Save to outputs/summary.txt
     os.makedirs(outputs_dir, exist_ok=True)
