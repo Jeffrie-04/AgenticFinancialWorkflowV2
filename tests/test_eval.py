@@ -175,6 +175,59 @@ def test_cache_miss_calls_and_stores_then_rerun_is_free(tmp_path, dirs):
         {k: v for k, v in first.items() if k not in ("calls", "cache_hits")}
 
 
+def flaky_provider(monkeypatch, *outcomes):
+    """The real call_model (with its retries), its provider call replaced:
+    each outcome in turn is raised or returned. Nothing sleeps."""
+    import bedrock_client
+    sent = []
+
+    def provider(prompt):
+        outcome = outcomes[len(sent)]
+        sent.append(prompt)
+        if isinstance(outcome, BaseException):
+            raise outcome
+        return outcome
+    monkeypatch.setattr(bedrock_client, "MODEL_PROVIDER", "openai")
+    monkeypatch.setattr(bedrock_client, "_call_openai", provider)
+    monkeypatch.setattr(bedrock_client, "_sleep", lambda seconds: None)
+    return bedrock_client.call_model, sent
+
+
+def rate_limited():
+    import httpx2
+    import openai
+    request = httpx2.Request("POST", "https://stub.example/v1")
+    return openai.RateLimitError("rate limited", response=httpx2.Response(429, request=request), body=None)
+
+
+def test_cache_stores_only_the_final_reply_after_a_retry(tmp_path, monkeypatch):
+    call, sent = flaky_provider(monkeypatch, rate_limited(), "the reply")
+    stats = run_eval.Counter(calls=0, cache_hits=0)
+    cached = run_eval.cached(call, IDENTITY, str(tmp_path), stats)
+
+    assert cached("the prompt") == "the reply"
+    assert sent == ["the prompt", "the prompt"]  # retried inside call_model
+    assert stats["calls"] == 1                   # one call as the cache sees it
+    files = os.listdir(tmp_path)
+    assert len(files) == 1
+    assert (tmp_path / files[0]).read_text(encoding="utf-8") == "the reply"
+
+    assert cached("the prompt") == "the reply"  # and it replays from the cache
+    assert (stats["calls"], stats["cache_hits"], len(sent)) == (1, 1, 2)
+
+
+def test_cache_writes_nothing_when_retries_run_out(tmp_path, monkeypatch):
+    import openai
+    call, sent = flaky_provider(monkeypatch, *[rate_limited() for _ in range(4)])
+    stats = run_eval.Counter(calls=0, cache_hits=0)
+    cached = run_eval.cached(call, IDENTITY, str(tmp_path / "cache"), stats)
+
+    with pytest.raises(openai.RateLimitError):
+        cached("the prompt")
+    assert len(sent) == 4
+    assert not (tmp_path / "cache").exists()
+
+
 def test_cache_key_changes_with_the_rows_the_version_and_the_model(tmp_path, dirs):
     answers = {"a1": TRAVEL, "a2": "Shopping", "a3": "Utilities", "b1": TRAVEL, "b2": "Dining", "b3": "Other"}
     run(tmp_path, dirs, "v2", dict(answers))
