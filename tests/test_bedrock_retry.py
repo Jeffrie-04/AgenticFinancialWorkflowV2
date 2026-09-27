@@ -82,9 +82,42 @@ def test_sdk_retry_after(sdk):
     assert _retry_after(sdk.APITimeoutError(request=REQUEST)) is None
 
 
-@pytest.mark.parametrize("value", ["Wed, 21 Oct 2026 07:28:00 GMT", "soon", "", "-3", "nan", "inf"])
+@pytest.mark.parametrize("value", ["soon", "", "-3", "nan", "inf", "Wed, 99 Foo 2026 07:28:00 GMT"])
 def test_unparseable_retry_after_is_ignored(value):
     assert _retry_after(sdk_status_error(anthropic, 429, {"retry-after": value})) is None
+
+
+NOW = 1_800_000_000.0  # a fixed clock for HTTP-date Retry-After
+
+
+def http_date(seconds_from_now):
+    from datetime import datetime, timezone
+    from email.utils import format_datetime
+    return format_datetime(datetime.fromtimestamp(NOW + seconds_from_now, tz=timezone.utc), usegmt=True)
+
+
+@pytest.fixture
+def clock(monkeypatch):
+    monkeypatch.setattr(bedrock_client, "_now", lambda: NOW)
+
+
+@pytest.mark.parametrize("sdk", [anthropic, openai], ids=["anthropic", "openai"])
+def test_retry_after_http_date_is_parsed(sdk, clock):
+    assert _retry_after(sdk_status_error(sdk, 429, {"retry-after": http_date(120)})) == 120.0
+    assert _retry_after(sdk_status_error(sdk, 429, {"retry-after": http_date(3)})) == 3.0
+
+
+def test_retry_after_http_date_in_the_past_means_no_extra_wait(clock):
+    assert _retry_after(sdk_status_error(openai, 429, {"retry-after": http_date(-60)})) == 0.0
+
+
+def test_bedrock_retry_after_http_date(clock):
+    assert _retry_after(client_error("ThrottlingException", 429, {"retry-after": http_date(20)})) == 20.0
+
+
+def test_invalid_retry_after_ms_falls_back_to_retry_after():
+    headers = {"retry-after-ms": "garbage", "retry-after": "45"}
+    assert _retry_after(sdk_status_error(anthropic, 429, headers)) == 45.0
 
 
 # ------------------------------------------------------------- Bedrock native
@@ -132,6 +165,96 @@ def test_bedrock_throttling_code_without_metadata_is_temporary():
 def test_bedrock_timeouts_and_connection_errors_are_temporary(exc):
     assert _is_transient(exc)
     assert _status_of(exc) is None
+
+
+def test_bedrock_incomplete_read_is_temporary():
+    exc = boto.IncompleteReadError(actual_bytes=10, expected_bytes=100)
+    assert _is_transient(exc)
+    assert _status_of(exc) is None
+
+
+# ------------------------------------------ certificate failures are permanent
+
+
+def cert_failure():
+    import ssl
+    return ssl.SSLCertVerificationError(1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed")
+
+
+def raised(make):
+    """Raise and catch make(), so __cause__/__context__ are set as in real code."""
+    try:
+        make()
+    except BaseException as exc:  # noqa: BLE001
+        return exc
+    raise AssertionError("nothing raised")
+
+
+def bedrock_ssl_error():
+    """botocore's own chain: ssl error -> urllib3 SSLError(e) from e -> raised
+    inside `except` as botocore SSLError(error=e) (httpsession.URLLib3Session.send)."""
+    import urllib3
+
+    def urllib3_error():
+        try:
+            raise cert_failure()
+        except OSError as e:
+            raise urllib3.exceptions.SSLError(e) from e
+
+    def botocore_error():
+        try:
+            urllib3_error()
+        except urllib3.exceptions.SSLError as e:
+            raise boto.SSLError(endpoint_url="https://bedrock-runtime.us-east-1.amazonaws.com", error=e)  # no "from": botocore raises it this way
+    return raised(botocore_error)
+
+
+def sdk_ssl_error(sdk):
+    """The SDKs' chain: ssl error -> httpx2.ConnectError from it -> APIConnectionError from that."""
+    def connect_error():
+        try:
+            raise cert_failure()
+        except OSError as e:
+            raise httpx2.ConnectError("certificate verify failed") from e
+
+    def sdk_error():
+        try:
+            connect_error()
+        except httpx2.ConnectError as e:
+            raise sdk.APIConnectionError(request=REQUEST) from e
+    return raised(sdk_error)
+
+
+def test_bedrock_certificate_failure_is_permanent():
+    exc = bedrock_ssl_error()
+    assert isinstance(exc, boto.SSLError)
+    assert isinstance(exc, boto.ConnectionError)  # would otherwise match the connection rule
+    assert not _is_transient(exc)
+
+
+@pytest.mark.parametrize("sdk", [anthropic, openai], ids=["anthropic", "openai"])
+def test_sdk_certificate_failure_is_permanent(sdk):
+    exc = sdk_ssl_error(sdk)
+    assert isinstance(exc, sdk.APIConnectionError)
+    assert not _is_transient(exc)
+
+
+def test_other_ssl_errors_stay_temporary():
+    """Only certificate verification is permanent; e.g. a dropped TLS handshake is not."""
+    import ssl
+
+    def make():
+        try:
+            raise ssl.SSLEOFError(8, "EOF occurred in violation of protocol")
+        except OSError as e:
+            raise httpx2.ConnectError("eof") from e
+
+    def sdk_error():
+        try:
+            make()
+        except httpx2.ConnectError as e:
+            raise openai.APIConnectionError(request=REQUEST) from e
+    assert _is_transient(raised(sdk_error))
 
 
 def test_bedrock_retry_after():
@@ -253,6 +376,38 @@ def test_call_model_raises_after_three_retries(monkeypatch, sleeps):
     assert sleeps == [1.5, 2.5, 4.5]
 
 
+@pytest.mark.parametrize("provider,error", [
+    ("claude", bedrock_ssl_error),
+    ("openai", lambda: sdk_ssl_error(openai)),
+    ("anthropic_direct", lambda: sdk_ssl_error(anthropic)),
+])
+def test_call_model_does_not_retry_a_certificate_failure(monkeypatch, sleeps, provider, error):
+    exc = error()
+    prompts = replies(monkeypatch, exc, "never reached", provider=provider)
+    with pytest.raises(type(exc)):
+        bedrock_client.call_model("the prompt")
+    assert len(prompts) == 1
+    assert sleeps == []
+
+
+def test_call_model_gives_up_on_an_http_date_retry_after_beyond_the_budget(monkeypatch, sleeps, clock):
+    prompts = replies(monkeypatch, sdk_status_error(openai, 429, {"retry-after": http_date(120)}), "never")
+    with pytest.raises(openai.RateLimitError):
+        bedrock_client.call_model("the prompt")
+    assert len(prompts) == 1
+    assert sleeps == []
+
+
+def test_call_model_invalid_retry_after_ms_falls_back_and_gives_up(monkeypatch, sleeps):
+    headers = {"retry-after-ms": "garbage", "retry-after": "45"}
+    prompts = replies(monkeypatch, sdk_status_error(anthropic, 429, headers), "never",
+                      provider="anthropic_direct")
+    with pytest.raises(anthropic.RateLimitError):
+        bedrock_client.call_model("the prompt")
+    assert len(prompts) == 1
+    assert sleeps == []
+
+
 def test_call_model_uses_retry_after_and_respects_the_budget(monkeypatch, sleeps):
     prompts = replies(monkeypatch, sdk_status_error(openai, 429, {"retry-after": "45"}), "never reached")
     with pytest.raises(openai.RateLimitError):
@@ -282,3 +437,71 @@ def test_an_outage_still_stops_run_py_with_exit_1(tmp_path, monkeypatch, sleeps,
     out = capsys.readouterr().out
     assert "FAILED at Phase 2 - Plan: InternalServerError" in out
     assert not (tmp_path / "outputs" / "plan.json").exists()
+
+
+# ------------------------- each provider call builds its client via its factory
+
+
+def test_call_openai_uses_its_factory(monkeypatch):
+    from types import SimpleNamespace
+    sent = {}
+
+    def create(**kwargs):
+        sent.update(kwargs)
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content="openai reply"))])
+    client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+    monkeypatch.setattr(bedrock_client, "_openai_client", lambda: client)
+
+    assert bedrock_client._call_openai("the prompt") == "openai reply"
+    assert sent["messages"] == [{"role": "user", "content": "the prompt"}]
+
+
+def test_call_anthropic_direct_uses_its_factory(monkeypatch):
+    from types import SimpleNamespace
+    sent = {}
+
+    def create(**kwargs):
+        sent.update(kwargs)
+        return SimpleNamespace(content=[SimpleNamespace(text="anthropic reply")])
+    client = SimpleNamespace(messages=SimpleNamespace(create=create))
+    monkeypatch.setattr(bedrock_client, "_anthropic_client", lambda: client)
+
+    assert bedrock_client._call_anthropic_direct("the prompt") == "anthropic reply"
+    assert sent["messages"] == [{"role": "user", "content": "the prompt"}]
+
+
+class FakeBedrock:
+    """invoke_model returns each body in turn as a real botocore StreamingBody
+    whose declared length is the full reply, so a short body fails on read()."""
+
+    def __init__(self, *bodies):
+        self.bodies, self.calls = list(bodies), 0
+
+    def invoke_model(self, **kwargs):
+        import io
+        import json
+
+        from botocore.response import StreamingBody
+        full = json.dumps({"content": [{"text": "bedrock reply"}]}).encode()
+        body = self.bodies[self.calls]
+        self.calls += 1
+        return {"body": StreamingBody(io.BytesIO(body if body is not None else full), len(full))}
+
+
+def test_call_claude_uses_its_factory(monkeypatch):
+    fake = FakeBedrock(None)
+    monkeypatch.setattr(bedrock_client, "_bedrock_client", lambda: fake)
+    assert bedrock_client._call_claude("the prompt") == "bedrock reply"
+    assert fake.calls == 1
+
+
+def test_truncated_bedrock_body_is_retried_through_the_body_read(monkeypatch, sleeps):
+    """The body is read inside the retried call: a truncated body raises
+    botocore IncompleteReadError, and the second, complete body succeeds."""
+    fake = FakeBedrock(b'{"content": [{"te', None)
+    monkeypatch.setattr(bedrock_client, "MODEL_PROVIDER", "claude")
+    monkeypatch.setattr(bedrock_client, "_bedrock_client", lambda: fake)
+
+    assert bedrock_client.call_model("the prompt") == "bedrock reply"
+    assert fake.calls == 2
+    assert sleeps == [1.5]

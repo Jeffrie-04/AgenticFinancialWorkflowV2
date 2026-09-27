@@ -2,7 +2,9 @@ import json
 import math
 import os
 import random
+import ssl
 import time
+from email.utils import parsedate_to_datetime
 
 import anthropic
 import boto3
@@ -49,9 +51,10 @@ _rand = random.random
 # ------------------------------------------- temporary vs. permanent errors
 # Used by the retry policy in afw/retry.py. Only temporary errors are retried:
 # rate limits (429), overloaded (529), any 5xx, request timeouts (408),
-# timeouts and connection errors. Everything else (400, 401, 403, 404, 409,
-# 413, 422, parse errors, our own exceptions) fails at once. Decided by type
-# and status code only, never by the error message.
+# timeouts, connection errors and a truncated response body. Everything else
+# (400, 401, 403, 404, 409, 413, 422, a failed certificate check, parse
+# errors, our own exceptions) fails at once. Decided by type, status code and
+# the exception's cause chain, never by the error message.
 
 TRANSIENT_STATUSES = frozenset({408, 429})  # plus every status >= 500, which includes 529
 
@@ -59,8 +62,10 @@ SDK_STATUS_ERRORS = (anthropic.APIStatusError, openai.APIStatusError)
 # Timeouts are subclasses: anthropic/openai.APITimeoutError.
 SDK_CONNECTION_ERRORS = (anthropic.APIConnectionError, openai.APIConnectionError)
 # ConnectionError covers ConnectTimeoutError and EndpointConnectionError;
-# HTTPClientError covers ReadTimeoutError and ConnectionClosedError.
-BOTO_CONNECTION_ERRORS = (boto_exceptions.ConnectionError, boto_exceptions.HTTPClientError)
+# HTTPClientError covers ReadTimeoutError and ConnectionClosedError;
+# IncompleteReadError is a response body cut short (raised by body.read()).
+BOTO_CONNECTION_ERRORS = (boto_exceptions.ConnectionError, boto_exceptions.HTTPClientError,
+                          boto_exceptions.IncompleteReadError)
 BEDROCK_TRANSIENT_CODES = frozenset({
     "ThrottlingException", "ServiceUnavailableException", "InternalServerException",
     "ModelNotReadyException", "ModelTimeoutException",
@@ -77,9 +82,30 @@ def _status_of(exc):
     return None
 
 
+def _causes(exc):
+    """exc and every exception it wraps: __cause__, __context__, botocore's
+    error= keyword, and exceptions held in args (urllib3's SSLError(e))."""
+    seen, pending = set(), [exc]
+    while pending:
+        current = pending.pop()
+        if not isinstance(current, BaseException) or id(current) in seen:
+            continue
+        seen.add(id(current))
+        yield current
+        pending += [current.__cause__, current.__context__,
+                    getattr(current, "kwargs", {}).get("error"), *current.args]
+
+
+def _is_certificate_failure(exc):
+    """A failed TLS certificate check (wrong CA, expired, bad hostname) anywhere
+    in the chain. Retrying can't fix it, so it is permanent even though the SDK
+    reports it as a connection error."""
+    return any(isinstance(cause, ssl.SSLCertVerificationError) for cause in _causes(exc))
+
+
 def _is_transient(exc):
     if isinstance(exc, SDK_CONNECTION_ERRORS + BOTO_CONNECTION_ERRORS):
-        return True
+        return not _is_certificate_failure(exc)
     if isinstance(exc, boto_exceptions.ClientError) and \
             exc.response.get("Error", {}).get("Code") in BEDROCK_TRANSIENT_CODES:
         return True
@@ -89,8 +115,11 @@ def _is_transient(exc):
     return False
 
 
+_now = time.time  # replaced in tests
+
+
 def _seconds(value, scale=1.0):
-    """A header value as a finite, non-negative number of seconds, else None (e.g. an HTTP date)."""
+    """A header value as a finite, non-negative number of seconds, else None."""
     try:
         seconds = float(value) / scale
     except (TypeError, ValueError):
@@ -98,8 +127,22 @@ def _seconds(value, scale=1.0):
     return seconds if math.isfinite(seconds) and seconds >= 0 else None
 
 
+def _seconds_until(value):
+    """An HTTP-date (RFC 9110, e.g. "Wed, 21 Oct 2026 07:28:00 GMT") as seconds
+    from now; 0 if it is already past; None if it isn't a valid date."""
+    try:
+        when = parsedate_to_datetime(value)
+    except (TypeError, ValueError, IndexError):
+        return None
+    if when.tzinfo is None:  # RFC 9110 dates are GMT
+        return None
+    return max(0.0, when.timestamp() - _now())
+
+
 def _retry_after(exc):
-    """Seconds the provider asked us to wait (retry-after-ms, else retry-after), or None."""
+    """Seconds the provider asked us to wait, or None: retry-after-ms if it is
+    valid, else retry-after as seconds or an HTTP-date. The retry budget in
+    afw/retry.py applies to whatever this returns."""
     if isinstance(exc, SDK_STATUS_ERRORS):
         headers = exc.response.headers  # case-insensitive
     elif isinstance(exc, boto_exceptions.ClientError):
@@ -107,9 +150,14 @@ def _retry_after(exc):
         headers = {str(k).lower(): v for k, v in raw.items()}
     else:
         return None
-    if headers.get("retry-after-ms") is not None:
-        return _seconds(headers.get("retry-after-ms"), scale=1000.0)
-    return _seconds(headers.get("retry-after"))
+    milliseconds = _seconds(headers.get("retry-after-ms"), scale=1000.0)
+    if milliseconds is not None:
+        return milliseconds
+    value = headers.get("retry-after")
+    if value is None:
+        return None
+    seconds = _seconds(value)
+    return seconds if seconds is not None else _seconds_until(value)
 
 
 # ------------------------------------------------------------------ clients

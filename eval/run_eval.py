@@ -16,9 +16,11 @@ provider, the model id, the (non-secret) endpoint and the full prompt, which
 contains the rows. A re-run costs nothing and reproduces the same numbers.
 API keys are never part of the key.
 
---offline replays a recorded run without any model: the identity and
-generated_at come from the recorded results/<version>.json (not the
-environment), and any cache miss is an error. CI uses it to check that
+--offline replays a recorded run without any model, and any cache miss is
+an error. The provider setting in the environment (MODEL_PROVIDER, base
+URLs) may still be read when bedrock_client is imported, but it is never
+used: the recorded identity and generated_at from results/<version>.json
+are. CI uses it to check that
 the committed cache still reproduces the committed results.
 
 Scoring:

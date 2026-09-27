@@ -23,7 +23,7 @@ def replayed(tmp_path, monkeypatch):
     import bedrock_client
 
     def refuse(*args, **kwargs):
-        raise AssertionError("the replay reached the live model or the env identity")
+        raise AssertionError("the replay reached the live model or used the env identity")
     monkeypatch.setattr(bedrock_client, "call_model", refuse)
     monkeypatch.setattr(run_eval, "model_identity", refuse)
 

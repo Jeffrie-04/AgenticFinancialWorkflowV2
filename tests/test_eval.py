@@ -262,11 +262,12 @@ ANSWERS = {"a1": TRAVEL, "a2": "Shopping", "a3": "Utilities", "b1": TRAVEL, "b2"
 
 @pytest.fixture
 def no_live_model(monkeypatch):
-    """Offline mode must never reach the real model or read the env identity."""
+    """Offline mode must never reach the real model or use the env identity
+    (the recorded identity is used instead)."""
     import bedrock_client
 
     def refuse(*args, **kwargs):
-        raise AssertionError("offline mode reached the live model or the env identity")
+        raise AssertionError("offline mode reached the live model or used the env identity")
     monkeypatch.setattr(bedrock_client, "call_model", refuse)
     monkeypatch.setattr(run_eval, "model_identity", refuse)
 
@@ -318,7 +319,7 @@ def test_offline_cache_miss_is_an_error_and_calls_nothing(tmp_path, dirs, monkey
     assert len(os.listdir(os.path.join(dirs["cache_dir"], "v2"))) == 2  # nothing added
 
 
-def test_offline_ignores_the_environment_identity(tmp_path, dirs, monkeypatch, no_live_model):
+def test_offline_uses_the_recorded_identity_not_the_environment(tmp_path, dirs, monkeypatch, no_live_model):
     import bedrock_client
     gold, path, _ = record_online(tmp_path, dirs, monkeypatch)
     monkeypatch.setattr(bedrock_client, "MODEL_PROVIDER", "claude")
@@ -328,6 +329,28 @@ def test_offline_ignores_the_environment_identity(tmp_path, dirs, monkeypatch, n
 
     with open(path) as f:
         assert json.load(f)["provider"] == "stub_provider"
+
+
+def test_offline_uses_the_recorded_identity_with_model_provider_claude_set(tmp_path, dirs, monkeypatch):
+    """MODEL_PROVIDER=claude in the environment (and in bedrock_client, as if
+    read at import). model_identity is left real: had offline mode used it,
+    the key would be claude's and every prompt a cache miss."""
+    import bedrock_client
+    gold, path, _ = record_online(tmp_path, dirs, monkeypatch)
+    monkeypatch.setenv("MODEL_PROVIDER", "claude")
+    monkeypatch.setattr(bedrock_client, "MODEL_PROVIDER", "claude")
+    assert run_eval.model_identity()[0] == "claude"
+
+    def refuse(prompt):
+        raise AssertionError("offline mode reached the live model")
+    monkeypatch.setattr(bedrock_client, "call_model", refuse)
+
+    run_eval.main(["--version", "v2", "--gold", gold, "--offline"], **dirs)
+
+    with open(path) as f:
+        replayed = json.load(f)
+    assert (replayed["provider"], replayed["model"], replayed["endpoint"]) == IDENTITY
+    assert (replayed["calls"], replayed["cache_hits"]) == (0, 2)
 
 
 def test_offline_without_recorded_results_is_an_error(tmp_path, dirs, no_live_model):
