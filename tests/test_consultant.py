@@ -35,7 +35,7 @@ def test_config_is_registered():
 
 
 def test_ingest_passes_with_expected_statuses(result):
-    assert result.counts == {"rows": 51, "ok": 49, "needs_review": 1, "rejected": 1}
+    assert result.counts == {"rows": 54, "ok": 52, "needs_review": 1, "rejected": 1}
     assert result.counts["rejected"] / result.counts["rows"] < 0.10
 
 
@@ -89,6 +89,20 @@ def categorizer_prompt(result, tmp_path_factory):
     return prompts[0]
 
 
+LOOK_ALIKES = {
+    "Peoples Gas": "Natural gas service",               # a utility bill, not fuel
+    "Tortas Frontera O'Hare": "Lunch at ORD before flight",  # dining at an airport
+    "Jiffy Lube": "Oil change",                         # car maintenance, outside the definition
+}
+
+
+def test_look_alike_rows_are_sent_as_purchases(result, categorizer_prompt):
+    for merchant, description in LOOK_ALIKES.items():
+        (row,) = by_merchant(result, merchant, "DEBIT")
+        assert row.status == Status.OK and row.description == description
+        assert row.id in categorizer_prompt
+
+
 def test_card_number_is_masked_in_the_prompt(categorizer_prompt):
     assert CARD not in categorizer_prompt
     assert "card ****4242 on file" in categorizer_prompt
@@ -108,5 +122,5 @@ def test_only_ok_non_refund_debits_are_sent(result, categorizer_prompt):
         assert credit.id not in categorizer_prompt
         assert credit.description not in categorizer_prompt
     sent = [t for t in result.rows if t.status == Status.OK and t.direction.value == "DEBIT" and not t.is_refund]
-    assert len(sent) == 43
+    assert len(sent) == 46
     assert all(t.id in categorizer_prompt for t in sent)
