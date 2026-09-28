@@ -129,6 +129,24 @@ docs/adr/                architecture decision records
 tests/                   pytest suite; conftest.py blocks network and API keys
 ```
 
+## Where things live
+
+| Feature | File | Main function |
+|---|---|---|
+| Ingest and validation | [afw/ingest.py](afw/ingest.py), [afw/models.py](afw/models.py) | `ingest_file`, `parse_row`, `Transaction` |
+| Refund detection | [afw/ingest.py](afw/ingest.py) | `detect_refunds` |
+| Categorizer and repair retry | [phase3_categorized.py](phase3_categorized.py) | `categorize` (repair prompt from `build_prompt`) |
+| PII masking | [afw/guards/pii.py](afw/guards/pii.py), [afw/llm_input.py](afw/llm_input.py) | `mask_pii`, `prompt_row` |
+| Model output validation | [afw/guards/output_validation.py](afw/guards/output_validation.py) | `extract_json`, `check_reply` |
+| Direction check | [afw/models.py](afw/models.py), [afw/guards/output_validation.py](afw/guards/output_validation.py) | `direction_allows`, called in `check_reply` |
+| KPI engine | [phase3_kpisnoAI.py](phase3_kpisnoAI.py) | `join_categories`, `apply_refunds`, `compute_*`, `validate` |
+| Grounding check and fallback | [afw/guards/grounding.py](afw/guards/grounding.py), [afw/narrative.py](afw/narrative.py) | `check_grounding`, `grounded_text`, `fallback_summary`, `fallback_reflection` |
+| Retry policy and error classification | [afw/retry.py](afw/retry.py), [bedrock_client.py](bedrock_client.py) | `with_retries`, `call_model`, `_is_transient`, `_retry_after` |
+| Eval harness and offline replay | [eval/run_eval.py](eval/run_eval.py) | `evaluate`, `cached`, `offline_call` (`--offline`) |
+| CI workflow | [.github/workflows/ci.yml](.github/workflows/ci.yml) | job `check` |
+| Dashboard | [app.py](app.py) | Streamlit script; reads outputs with `load_json`, `load_kpis` |
+| Network guard in tests | [tests/conftest.py](tests/conftest.py) | `no_network_no_keys` (autouse), `NetworkBlocked` |
+
 ## Decision records
 
 - [ADR 0001](docs/adr/0001-debit-credit-direction.md): positive amount plus direction instead of signed amounts.
@@ -155,3 +173,5 @@ This started as a team class project. This repository is my individual continuat
 - **Checkpoints:** save progress after each phase so a failed run resumes instead of starting over.
 - **Compute the numbers the model wants in code:** when the model reaches for a derived figure (like the restaurant reflection's "97.2%"), compute that figure in the KPI engine so the text can cite it.
 - **Statement ingestion and multi-month data:** parse real bank and credit-card statements, and support trend metrics across periods.
+- **Remove the legacy no-`--business-dir` path:** `python run.py` without `--business-dir` still defaults to `data/transactiondata.csv` and a root `outputs/`, and fails because the CSV no longer exists.
+- **Rename modules by what they do:** `bedrock_client.py` → `llm_client.py` (about 80 references across 17 files), and move the `phase*.py` modules into `afw/` (for example `phase3_kpisnoAI.py` → `afw/kpis.py`) so mypy covers them; one PR per rename.
